@@ -35,4 +35,142 @@ Roda 特别注意应用程序范围内的污染，尽量避免在应用内部使
 
 `lucid_http` 是在 `http.rb` 之上做了一层薄薄的封装。`http.rb` 提供了非常简单和一致的 API，用来执行 HTTP 请求。`lucid_http`在此之上，提供了更高层次的抽象表示。
 
+我创建了一个小应用，用来展示这个 gem 如何工作。代码包含在 Master Roda 的仓库中，(地址在这里)[https://gitlab.com/fiachetti/mastering-roda/]，(在 appendix_lucid_http_app.ru 文件中)[https://gitlab.com/fiachetti/mastering-roda/]。在附录部分，我讲介绍如何运行起这个项目。
+
+我们先构建一个 GET 请求，访问 `hello`。
+
+要完成这个操作，我们需要调用 GET 方法，将要访问的地址作为一个参数传递进去
+
+```
+require "lucid_http"
+
+GET "/hello"
+# => "<h1>Hello World!<h1>"
+```
+
+这个方法将返回响应的 body，如注释中所示。
+
+默认情况下，base URL 是 `http://localhost:9292`。注意，结尾没有 `/`，所以我们访问相对路径时，要以 `/` 作为请求开头，如 `/hello`。
+
+通过调用 GET 方法，我们得到了响应的 body。那如果想要获取其他相关信息呢？`lucid_http` 同样提供了相应的方法：
+
+```
+require "lucid_http"
+
+GET "/hello/you"
+status                          # => 200 OK
+status.to_i                     # => 200
+content_type                    # => "text/html"
+path                            # => "http://localhost:9292/hello/you"
+```
+
+当我们进行下一次请求时，当前请求的上下文都会被清理掉，新请求会有一个干净的执行环境。
+
+```
+require "lucid_http"
+
+GET "/hello/you"
+status                          # => 200 OK
+content_type                    # => "text/html"
+path                            # => "http://localhost:9292/hello/you"
+body[/\>(.+)\</, 1]             # => "Hello, You!"
+
+GET "/403"
+status                          # => 403 Forbidden
+content_type                    # => "text/html"
+path                            # => "http://localhost:9292/403"
+body                            # => "The request returned a 403 status."
+```
+
+我们可以通过传递 `follow: true` 参数，来使请求响应重定向。
+
+```
+require "lucid_http"
+
+GET "/redirect_me"
+status                          # => 302 Found
+
+GET "/redirect_me", follow: true
+status                          # => 200 OK
+body                            # => "You have arrived here due to a redirection."
+```
+
+如果我们得到错误，我们可以通过调用 `error` 来查看错误信息。这个方法会把 body 中的第一行作为错误描述信息。
+
+```
+require "lucid_http"
+
+GET "/500"
+status                          # => 500 Internal Server Error
+error                           # => "SocketError: SocketError"
+```
+
+当然，如果请求的 `code` 不是 `500`，那么 `lucid_http` 也不会胡乱返回错误信息。
+
+```
+require "lucid_http"
+
+GET "/not_500"
+status                          # => 200 OK
+error                           # => "No 500 error found."
+```
+
+默认情况下，`lucid_http` 不会对返回 `JSON` 格式的端点做特殊处理，所以当返回 `JSON` 数据时，显示的不是很友好。
+
+```
+require "lucid_http"
+
+GET "/hello_world"
+# => "You said: hello_world"
+
+GET "/hello_world.json"
+# => "{\"content\":\"You said: hello_world\",\"keyword\":\"hello_world\",\"timestamp\":\"2016-12-31 15:00:42 -0300\",\"method\":\"GET\",\"status\":200}"
+```
+
+我们可以通过传递 `json: true` 参数，来美化 `JSON` 的显示：
+
+```
+require "lucid_http"
+
+GET "/hello_world"
+# => "You said: hello_world"
+
+GET "/hello_world.json", json: true
+# => {"content"=>"You said: hello_world",
+#     "keyword"=>"hello_world",
+#     "timestamp"=>"2016-12-31 15:01:06 -0300",
+#     "method"=>"GET",
+#     "status"=>200}
+```
+
+`lucid_http` 当然也支持多种 HTTP 请求类型，供我们使用。
+
+```
+require "lucid_http"
+
+GET     "/verb"                  # => "<GET>"
+POST    "/verb"                  # => "<POST>"
+PUT     "/verb"                  # => "<PUT>"
+PATCH   "/verb"                  # => "<PATCH>"
+DELETE  "/verb"                  # => "<DELETE>"
+OPTIONS "/verb"                  # => "<OPTIONS>"
+```
+
+最后要展示的，使通过 `:form` 参数来构建一个传递 `form` 表单的请求。
+
+```
+require "lucid_http"
+
+POST "/params?item=book", json: true
+# => {"item"=>"book"}
+
+POST "/params", json: true, form: { item: "book", quantity: 1, price: 50.0, title: "The complete guide to doing absolutely nothing at all."  }
+# => {"item"=>"book",
+#     "quantity"=>"1",
+#     "price"=>"50.0",
+#     "title"=>"The complete guide to doing absolutely nothing at all."}
+```
+
+OK，我们已经简单介绍了一些阅读本书的前置知识，以及代码展示风格，现在可以开始了。
+
 
