@@ -173,4 +173,38 @@ POST "/params", json: true, form: { item: "book", quantity: 1, price: 50.0, titl
 
 OK，我们已经简单介绍了一些阅读本书的前置知识，以及代码展示风格，现在可以开始了。
 
+### Roda 核心
+
+在本节，我们将探索 Roda 的核心类，以及 Roda 默认的一些行为和功能。我们会介绍许多 Roda 的核心特性，以及相关插件。
+
+我们将在本节学习到 Roda 应用程序的基本结构、用户发起的请求是如何被 Roda 代码处理的，如何返回适当的内容作为请求的响应，以及处理用户会话。
+
+#### 一个非常小的 hello world
+
+我们将通过构建一个非常小的 Web 应用程序来看看它是如何工作的。我们首先需要创建一个 Roda 项目。
+
+很多用户有重量级 Web 框架的使用经验，比如 Rails。这些框架往往提供命令行工具用来新建项目。Roda 更像一个库而不是框架，它并没有提供命令行工具。
+
+所以，我们的第一步是创建一个新的空文件夹。
+
+```
+mkdir my_app
+```
+
+然后添加 `Gemfile`，来控制我们项目中用到的 Rubygems。
+
+理所应当的，我们第一个添加的 Gem 是 `roda`。然后我们需要一个 Web 应用服务器。我们使用 `puma`，它是一个简洁的，成熟的，快速的选择。现在，我们的 `Gemfile` 看起来是这样的：
+
+```
+source "https://rubygems.org"
+
+gem "roda"
+gem "puma"
+```
+
+现在来执行 `bundle install`，来安装我们添加的gems。
+
+```
+bundle install
+```
 
