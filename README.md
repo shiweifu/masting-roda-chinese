@@ -234,3 +234,42 @@ end
 run App
 ```
 
+
+然后再命令行中，运行 `rackup` 命令，开启一个 Web 服务器，开始接收请求。
+
+```
+rackup
+```
+
+现在，当在浏览器访问 `http://localhost:9292/hello`，我们已经可以看到消息啦。
+
+让我们修改一下这个小应用，我们修改 block 的返回值.
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.get "hello" do
+      "Hello, world!"
+    end
+  end
+end
+
+run App
+```
+
+再次访问 `http://localhost:9292/hello`，我们将会发现毫无变化。为什么呢？因为服务器还在执行着旧代码。
+
+这再次题型我们，我们不是建立在精美的 web 框架上。如果我们想要诸如代码修改，自动重新加载这样的功能，我们必须动一动手。
+
+实现重新加载代码比较简单的方式是，使用 `rerun` gem，(RubyTapas Episode #320)[https://www.rubytapas.com/2015/06/29/episode-320-rerun/?ref=federico] 介绍了这一工具。
+
+执行：
+```
+return rackup
+```
+
+现在，当我们再次访问 ()[http://localhost:9292/hello]，我们将会看到最新代码的输出。
+
+
