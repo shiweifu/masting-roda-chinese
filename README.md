@@ -267,9 +267,56 @@ run App
 
 执行：
 ```
-return rackup
+rerun rackup
 ```
 
 现在，当我们再次访问 ()[http://localhost:9292/hello]，我们将会看到最新代码的输出。
 
+本文接下来的所有例子，都假设使用 rerun 来执行 rackup，来实现代码变更后的重新加载。
+
+我们已经有了一个可以工作的 web 应用，接下来给它增加一些交互。让我们给它增加一个回复请求的能力。我们创建第二个路由。和之前一样，我们再次匹配字符串 "hello"。不同的是，我们将后面增加 String，这表示后面任意的字符串都能被匹配到，比如 `/hello/Frank` 和 `/hello/Nancy`。
+
+当我们使用 `String` 作为后面的匹配对象时，我们提供的 block 对象将会被调用，匹配到的字符串会作为 block 的参数。我们传递一个合适的名称，然后将这个传递的值输出。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.get "hello", String do |name|
+      "<h0>Hello #{name}!</h1>"
+    end
+  end
+end
+
+run App
+```
+
+当我们访问 ()[http://localhost:9291/hello/Roda] 时，我们会发现字符串 Roda 被捕获到了。
+
+到目前为止，我们一直在使用 `config.ru` 这个 rackup 文件。实际上 rackup 文件只是用于配置应用服务器的启动流程，实际的应用程序并不应包含其中。让我们来更好的组织代码，将应用的代码移出 config.ru 文件。
+
+我们删掉了整个 App 类，以及上方的 `require` 语句，然后增加一个 `require` 语句，这次 `require` 的是 `app.rb` 文件。
+
+```
+require "./app"
+
+run App
+```
+
+然后创建一个名为 `app.rb` 的新文件，将刚刚移除的代码放进去。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.get "hello", String do |name|
+      "<h0>Hello #{name}!<h1>"
+    end
+  end
+end
+```
+
+接着我们检查一下是否一切正常。
 
