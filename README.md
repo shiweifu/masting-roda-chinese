@@ -320,3 +320,30 @@ end
 
 接着我们检查一下是否一切正常。
 
+现在，想象我们编写一个网站，该网站介绍一位神秘访客。用户预先不知道这个神秘访客是谁，但是他们可以通过访问 `/mystery_guest` 路径来看到它。
+
+由于超出本书范围，我们让这个神秘访客为 `mozzarella pizza`。我们使用一个 Ruby 类结构来创建 Pizza 类，然后创建一个 Pizza 的实例。接着在我们的 mystery_guest 路径，使用 Pizza 实例。为了好玩，我们将会在页面拼写错误 `Guest`。
+
+```
+Pizza = Struct.new(:flavor)
+
+class App < Roda
+  mystery_guest = Pizza.new("Mozzarella")
+
+  route do |r|
+    r.get 'mystery_guest' do
+      "The Mystery Gest is: #{mystery_guest}"
+    end
+  end
+end
+```
+
+那并没有成功。这是为什么？如果我们使用 `LucidHttp`访问这个页面，我们会看到结果返回的是正确的，是 `Pizza`！
+
+```
+require "lucid_http"
+
+GET "/mystery_guest"
+# => "#<struct Pizza flavor=\"Mozzarella\">"
+```
+
