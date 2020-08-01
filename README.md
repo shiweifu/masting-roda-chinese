@@ -347,3 +347,39 @@ GET "/mystery_guest"
 # => "#<struct Pizza flavor=\"Mozzarella\">"
 ```
 
+请求已经得到正确的响应，为什么我们无法在浏览器中看到它？仔细观察，会发现 `#` 后面的字符串`<struct Pizza flavor="Mozzarella">`因为包含 HTML tag，所以无法正确显示。那么如何解决呢？一个方案是在 Pizza 类中实现 `to_s` 方法。不过这种方法有些无聊。即使对于这种解决方案，有两个主要因素，也需要特殊考虑：
+
+- 我们所讨论的秘密客人案例，有点像一个人为构建的例子，有点脱离现实，但事实并非如此。有时，我们要处理更长的响应，并且试图生成一个变量或方法的结果，而该结果实际上返回的类，可能类似 Pizza 类。我们可以使用 `to_s`，来返回一些格式化的信息，但我们无法写出一个广泛使用的`to_s`方法，因为不知道要处理的是什么类。
+
+- 我们实际上，是想要呈现 HTML 风格的字符串。比如<>这种，会被浏览器当作标签。这种情况下，我们需要对特殊内容转义。
+
+`h` 插件为以上种种情况提供了解决方案。我们可以使用 `plugin :h` 来加载该插件。引入该插件后，我们可以把想要处理的字符串传给 `h` 方法。
+
+```
+Pizza = Struct.new(:flavor)
+
+class App < Roda
+  plugin :h
+
+  mystery_guest = Pizza.new("Mozzarella")
+
+  route do |r|
+    r.get 'mystery_guest' do
+      "The Mystery Gest is: #{h mystery_guest}"
+    end
+  end
+end
+```
+
+这时，响应已经被处理。
+
+```
+require "lucid_http"
+
+GET "/mystery_guest"
+# => "The Mystery Gest is: #&lt;struct Pizza flavor=&quot;Mozzarella&quot;&gt;"
+```
+
+原始字符串可能有些奇怪，但是浏览器显示的一切正常。
+
+
