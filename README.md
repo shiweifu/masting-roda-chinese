@@ -416,6 +416,88 @@ p r
 
 `Roda::RodaRequest` 是 `Rack::Request` 的子类，添加了用于处理路由的方法。`App::RodaRequest` 是 `Roda::RodaRequest` 的子类，在创建 App 时自动生成，允许在插件中，自定义 App 请求实例。
 
+`Roda::RodaRequest` 是 `Rack::Request` 的子类，增加了有关路由的方法。`App::RodaRequest`是 `Roda::RodaRequest` 的子类，它在 App 对象创建时被生成。这允许我们通过插件自定义 App 请求实例。
+
+我们可以从 p 的输出种看到对 `/` 路径发起的 GET 请求。
+
+我们可以在路由处理方法中，调用请求对象的方法，接下来的章节会探索这些方法。现在，让我们定义一个路由。
+
+在这里，我们调用请求对象的 `on` 该方法，传递字符串参数和 block。在 block 中，我们返回一段字符串
+
+```
+class App < Roda
+  route do |r|
+    r.on "hello" do
+      "Hello Lucid!"
+    end
+  end
+end
+```
+
+`r.on` 方法，在 Roda 中，被成为匹配方法，这类方法接收参数，然后将参数与请求进行比对，看看是否匹配。如果匹配成功，匹配方法就调用传递过来的匹配block，到此，请求算是处理结束。如果与参数的比对没有成功，匹配方法就不会调用匹配 block，只会继续向下执行。
+
+`r.on` 方法是最简单的一种匹配方法。它只会与当前请求进行比对，没有什么其他的比对逻辑。
+
+让我们看看它都返回了什么。页面 body 是通过匹配 block 进行返回的。当 Roda 调用 match block 时，match block 返回了字符串，这个字符串就被用于响应对象的 body。我们同样可以通过响应对象的状态码是 200，内容类型为 `text/html`。
+
+```
+require "lucid_http"
+
+GET "/hello"
+
+body                            # => "Hello Lucid!"
+status                          # => "200 OK"
+content_type                    # => "text/html"
+```
+
+如果 block 返回 nil 或者 false，
+
+```
+class App < Roda
+  route do |r|
+    r.on "hello" do
+      nil
+    end
+  end
+end
+```
+
+这时 Roda 会认为路由没有被匹配到，然后返回空的 body，状态码为 404.
+
+```
+require "lucid_http"
+
+GET "/hello"
+
+body                      # => ""
+status                    # => "404 Not Found"
+```
+
+如果返回一些 Roda 无法处理的内容，比如 `Integer`
+
+```
+class App < Roda
+  route do |r|
+    r.on "hello" do
+      1
+    end
+  end
+end
+```
+
+Rails 抛出 `Roda::RodaError` 异常，大多数 WebServer 将会认为服务端内部错误：
+
+```
+require "lucid_http"
+
+GET "/hello"
+
+body                      # => "..."
+status                    # => "500 Internal Server Error"
+```
+
+Roda 的匹配 block，默认只支持 string, nil 和 false。可以通过插件来支持额外的返回值类型，稍后我们会讨论。
+
 
 
 
