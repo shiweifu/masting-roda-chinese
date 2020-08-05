@@ -566,6 +566,71 @@ p "GOODBYE block"
 ```
 
 
+如果我们现在访问[](http://localhost:9292/goodbye)，我们会期待 `hello` 和 `goodbye` 字符串都被输出，但是并不会，只有匹配道的路由部分会被执行。即使我们首先定义了 `hello` 路由。
+
+```
+"ROUTE block"
+"GOODBYE block"
+127.0.0.1 - - [16/Nov/2016:13:06:14 -0300] "GET /goodbye HTTP/1.1" 200 7 0.0017
+```
+
+事实上，这种树状风格的路由，正是 Roda 被称为“路由树 Web 工具包”的原因。
+
+也可以把路由想象成一种惰性评估，只有被匹配道的块才会被执行。
+
+这种树状的路由，还有另外一个优势。在大多数框架中，当要针对进来的请求进行一些初始化时，我们必须等待路由匹配完成。在 Roda 中，请求的初始化与配置，可以在路由匹配时就进行一些配置。这样就无需使用“过滤器”或“钩子”这种机制在路由之前或之后执行某些操作。
+
+这是什么意思呢？举个例子，同时存在两个路由，`hello` 和 `goodbye`，在进入这两个路由前，我们都需要在数据库中找到某个用户。让我们模拟这种场景，并将找到的用户赋值给某个变量。接着，我们在最后的输出字符串中，使用这个变量。这种情况下，我们需要在两个路由中，编写相同的代码两次。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "hello" do
+      name = "Lucid"
+      "Hello, #{name}!"
+    end
+
+    r.on "goodbye" do
+      name = "Lucid"
+      "Goodbye, #{name}!"
+    end
+  end
+end
+```
+
+如果按照这个例子来看，假设我们继续添加需要访问用户的子路由，那我们就需要继续获取这个用户，对吗？事实上是不用的。这种情况下，Ruby 代码块中的共享作用域性质提现了价值。我们可以只在路由块中获取一次这个用户，接着在每个嵌套的块中，都可以访问这个用户。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    name = "Lucid"
+
+    r.on "hello" do
+      "Hello, #{name}!"
+    end
+
+    r.on "goodbye" do
+      "Goodbye, #{name}!"
+    end
+  end
+end
+```
+
+现在访问 ()[http://localhost:9292/hello]，我们可以得到和我们预想一样的输出。访问 ()[http://localhost:9292/goodbye] 也会得到类似的输出。
+
+```
+require "lucid_http"
+
+GET "/hello"                    # => "Hello, Lucid!"
+GET "/goodbye"                  # => "Goodbye, Lucid!"
+```
+
+Roda 的路由的优势是将路由存储在一个块中，而不是某个数据结构。事实上，这是一种权衡过的设计，它限制了路由的自省能力，比如打印路由表。有一些办法可以优化自省能力，但是需要额外的设置。
+
 
 
 
