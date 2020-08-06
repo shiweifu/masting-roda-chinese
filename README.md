@@ -629,7 +629,126 @@ GET "/hello"                    # => "Hello, Lucid!"
 GET "/goodbye"                  # => "Goodbye, Lucid!"
 ```
 
-Roda 的路由的优势是将路由存储在一个块中，而不是某个数据结构。事实上，这是一种权衡过的设计，它限制了路由的自省能力，比如打印路由表。有一些办法可以优化自省能力，但是需要额外的设置。
+Roda 的路由的优势是将路由存储在一个代码块中，而不是某个数据结构。事实上，这是一种权衡过的设计，它限制了路由的自省能力，比如打印路由表。有一些办法可以优化自省能力，但是需要额外的设置。
+
+### 匹配函数
+
+#### r.on 和 r.is
+
+在前面的章节，我们已经概览了一下 Roda 中的路由。现在我们继续看 Roda 为我们提供的不同种类的 match 函数。
+
+我们来拿一个 Roda Blog 应用来进行说明（非常原始，对吧？）。我们想让 `/posts` 路由返回我们所有的 Posts。我们使用 `r.on` 来匹配。我们添加一个变量来存储我们的数据，该变量是我们所有帖子的哈希值。我们使用 join 方法，将数据的值连接成一个字符串，并在处理块结束时返回。
+
+```
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      post_list = {
+        1 => "Post[1]",
+        2 => "Post[2]",
+        3 => "Post[3]",
+        4 => "Post[4]",
+        5 => "Post[5]",
+      }
+
+      post_list.values.join(" | ")
+    end
+  end
+end
+```
+
+如果我们现在访问 (http://localhost:9292/posts)[http://localhost:9292/posts]，我们将看到帖子列表。我们访问 (http://localhost:9292/posts/)[http://localhost:9292/posts/] 或者 (http://localhost:9292/posts/whatever)[http://localhost:9292/posts/whatever]，我们将看到相同的列表。在真实的应用中，这并不是正确的行为，我们来修复它。
+
+```
+require "lucid_http"
+
+GET "/posts"
+body
+# => "Post[1] | Post[2] | Post[3] | Post[4] | Post[5]"
+
+GET "/posts/"
+body
+# => "Post[1] | Post[2] | Post[3] | Post[4] | Post[5]"
+
+GET "/posts/whatever"
+body
+# => "Post[1] | Post[2] | Post[3] | Post[4] | Post[5]"
+```
+
+`r.on` 会将所有的用于匹配的块与请求（本例中的"posts"）进行比对。由于这三个请求都以 `/posts` 开头，因此匹配成功。
+
+让我们来看一下路由在更复杂的情况下如何工作，假设我们希望 (http://localhost:9292/posts/1)[http://localhost:9292/posts/1] 返回 id 为 1 的帖子。要完成这一点，我们需要在 `r.on` "posts" 块中，嵌套调用 `r.is`。`r.is` 是一个类似 `r.on` 的匹配方法，区别在于除了 r.on 完成的匹配外，还要求处理匹配器后消耗剩余的路径，才算匹配成功（我们将在稍后解释消耗的含义）。
+
+换言之，`r.on` 是一个非终端匹配方法，而 `r.is` 是终端匹配方法。非终端匹配方法，不需要完全消耗剩余路径即可匹配成功。终端匹配方法，需要完全消耗剩余路径，才算是匹配成功。
+
+我们接下来传递 `Integer` 匹配器给 `r.is` 匹配方法。`Integer` 匹配器的操作类似 `String` 匹配器，但是 String 匹配器可以匹配任意字符串，而 `Integer` 只能匹配（0-9）。匹配成功后， Roda 将调用匹配块。Integer 类型的匹配器，将会把参数转换为整数。
+
+```
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      post_list = {
+        1 => "Post[1]",
+        2 => "Post[2]",
+        3 => "Post[3]",
+        4 => "Post[4]",
+        5 => "Post[5]",
+      }
+
+      r.is Integer do |id|
+        post_list[id]
+      end
+
+      post_list.values.map { |post| post }.join(" | ")
+    end
+  end
+end
+```
+
+再次尝试，我们将看到我们请求的帖子内容。如果我们请求的帖子不存在，post_list[id] 将会是 nil，返回 404 响应。这是一种理想行为，请求不存在的帖子将会返回不存在的响应。
+
+```
+require "lucid_http"
+
+GET "/posts/1"
+body                            # => "Post[1]"
+status                          # => "200 OK"
+
+GET "/posts/5"
+body                            # => "Post[5]"
+status                          # => "200 OK"
+
+GET "/posts/6"
+body                            # => ""
+status                          # => "404 Not Found"
+```
+
+添加 `r.is` 调用，不会影响其他路由。`/posts`，`/posts/` 和 `/posts/whatever` 的表现将不变。但是通常会对资源访问的地址做一些限制。我们将让 `/posts` 返回所有的日志，但 `/posts/` 和 `/posts/whatever` 返回 404 响应。我们可以通过将所有帖子的返回包装在 `r.is` 块中，来进行更改。
+
+```
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      post_list = {
+        1 => "Post[1]",
+        2 => "Post[2]",
+        3 => "Post[3]",
+        4 => "Post[4]",
+        5 => "Post[5]",
+      }
+
+      r.is Integer do |id|
+        post_list[id]
+      end
+
+      r.is do
+        post_list.values.map { |post| post }.join(" | ")
+      end
+    end
+  end
+end
+```
+
 
 
 
