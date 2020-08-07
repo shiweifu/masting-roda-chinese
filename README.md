@@ -750,7 +750,54 @@ end
 ```
 
 
+接下来，我们可以检查是否达到预期的效果。
 
+```
+require "lucid_http"
 
+GET "/posts"
+body
+# => "Post[1] | Post[2] | Post[3] | Post[4] | Post[5]"
 
+GET "/posts/"
+body                            # => ""
+status                          # => "404 Not Found"
 
+GET "/posts/whatever"
+body                            # => ""
+status                          # => "404 Not Found"
+```
+
+回到我们的例子，这看起来有点奇怪，因为 `r.is` 后面没有跟匹配器。随着我们使用 Roda，这将变得自然而然。我们可以将匹配器视为过滤器。Roda 的默认行为是将 match 方法进行匹配，除非存在匹配器或其他原因导致匹配不成功。如果没有匹配器，则 `r.on` 一直成功；`r.is` 只在剩余路径已经被消耗完毕时才匹配。
+
+现在，我们来讨论请求路径的消耗是什么意思。当匹配器对路径进行匹配时，他们将消耗匹配地址的路径部分。Roda 在路由匹配期间，不会修改请求的路径（r.path 和 r.path_info 保持不变）。它存储路径中有尚未路由的部分，被成为匹配路径（可在 r.matched_path 中找到）。匹配器成功匹配后，他们会消耗剩余路径的一部分。剩余路径在路由过程中变小，如果为空，则剩余路径已被完全消耗。
+
+通过一个`剩余路径`和`匹配路径`的例子，很容易说明清楚它是如何工作的。让我们在不同的树状路由块中，输出`剩余路径`和`匹配路径`。
+
+```
+ class App < Roda
+    route do |r|
+p [0, r.matched_path, r.remaining_path]
+      r.on "posts" do
+p [1, r.matched_path, r.remaining_path]
+        post_list = {
+          1 => "Post[1]",
+          2 => "Post[2]",
+          3 => "Post[3]",
+          4 => "Post[4]",
+          5 => "Post[5]",
+        }
+
+        r.is Integer do |id|
+p [2, r.matched_path, r.remaining_path]
+          post_list[id]
+        end
+
+        r.is do
+p [3, r.matched_path, r.remaining_path]
+          post_list.values.map { |post| post }.join(" | ")
+        end
+      end
+    end
+  end
+```
