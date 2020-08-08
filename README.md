@@ -801,3 +801,69 @@ p [3, r.matched_path, r.remaining_path]
     end
   end
 ```
+
+下面是 `/`，`/posts` 和 `/posts/1` 的请求结果，显示了匹配器如何使用剩余的路径以及每个步骤中的路径是什么。
+
+```
+[0, "", "/"]
+127.0.0.1 - - [19/Sep/2016:19:46:26 -0300] "GET / HTTP/1.1" 404 - 0.0016
+[0, "", "/posts"]
+[1, "/posts", ""]
+[3, "/posts", ""]
+127.0.0.1 - - [19/Sep/2016:19:46:36 -0300] "GET /posts HTTP/1.1" 200 47 0.0016
+[0, "", "/posts/1"]
+[1, "/posts", "/1"]
+[2, "/posts/1", ""]
+127.0.0.1 - - [19/Sep/2016:19:46:46 -0300] "GET /posts/1 HTTP/1.1" 200 7 0.0016
+```
+
+在刚才的大多数例子，使用单个匹配器，但其实匹配方法可以接受多个匹配参数。我们可以方便的接受年、月、日为参数，然后用于创建 `Date` 对象和传递给 Post.posts_for_date 方法。
+
+```
+# ...
+
+r.on "posts", "date", Integer, Integer, Integer do |year, month, day|
+  date = Date.new(year, month, day)
+  posts = Post.posts_for_date(date)
+
+  # ...
+end
+
+#...
+```
+
+这里 `捕获` 的意思是与 `消费` 有关。当匹配器消耗一节路径时，这段路径可能被捕获并执行响应的匹配块代码。在上面的例子中，"posts"，"date" 和 Integer 是整体匹配器，余下的路径都会被匹配到。但是，"posts" 和 "date" 匹配器不会捕获他们所使用的那节路径，而整数捕获器会捕获。由于有三个整数匹配器，因此块有三个参数。
+
+让我们展开讨论一下之前的例子，聚焦到 `/posts/1/show` 和 `/posts/1/show/detail` 路由。他们都用于显示日志，但是 `detail` 路由返回的内容包含最后访问的信息。因为我们需要处理 `/posts/1` 下的路由，所以我们不能使用 `r.is Integer`，我们需要换用 `r.on Integer`，因为此时路由树不再需要终端匹配。
+
+在 `r.on Integer` 匹配块中，我们找到日志，并存储为一个变量。然后我们调用 `r.on "show"`，并在其中使用两个 `r.is`，第一个不带有参数，表示匹配 `show` 本身，第二个带上 `"/detail"`，用于匹配剩余的路径。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      # ...
+      r.on Integer do |id|
+        post = post_list[id]
+
+        r.on "show"  do
+          r.is do
+            "Showing #{post}"
+          end
+
+          r.is "detail" do
+            "Showing #{post} | Last access: #{Time.now.strftime("%H:%M:%S")}"
+          end
+        end
+      end
+      # ...
+    end
+  end
+end
+```
+
+简而言之，`r.on` 被用于路由树树枝的路径处理，该分支中有多个要处理的路径。`r.is` 用于处理路由树种的叶子路径，其余的路径已经被路由树匹配完了。
+
+`r.on` 和 `r.is` 可能是 Roda 种最通用的路由匹配方法。然而，一个 HTTP 请求不仅是对路径的请求，还是对使用特定请求方法的路径的请求，响应取决于所使用的请求方法。在下一节中，我们讲讨论如何处理请求方法。
