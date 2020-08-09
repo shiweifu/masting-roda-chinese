@@ -867,3 +867,87 @@ end
 简而言之，`r.on` 被用于路由树树枝的路径处理，该分支中有多个要处理的路径。`r.is` 用于处理路由树种的叶子路径，其余的路径已经被路由树匹配完了。
 
 `r.on` 和 `r.is` 可能是 Roda 种最通用的路由匹配方法。然而，一个 HTTP 请求不仅是对路径的请求，还是对使用特定请求方法的路径的请求，响应取决于所使用的请求方法。在下一节中，我们讲讨论如何处理请求方法。
+
+
+#### r.get 和 r.post
+
+现在，我们已经知道了如何为不同路径编写路由，现在，我们来讨论如何处理各种请求方法。对于浏览器，我们只需要考虑两种请求方法：`GET` 和 `POST`。通常，`GET` 用于导航到某个页面，一般用于幂等的请求。而 `POST` 用于可能修改状态的表单。
+
+一般来说，成功处理请求，需要完整的请求路径（消耗整个剩余路径），以及特定于请求的方法。默认情况下，Roda 包含两种用于处理特定请求的匹配方法，`r.get` 用于处理 GET 请求，`r.post` 用于处理 POST 请求。
+
+除了匹配的方法不同，`r.get` 和 `r.post` 具有相同的行为。如果没有传递任何匹配器，则 `r.get` 和 `r.post` 均作为非终端匹配方法运行。如果将任何参数传递给它们，则 `r.get` 和 `r.post` 都将作为终端匹配方法。为什么通过传递参数来决定行为的差异？好吧，虽然 Roda 的行为看起来不一致，但却完全符合我们的要求。
+
+通常，使用 `r.is` 完全匹配路由路径之后，不再使用任何参数检查请求方法，这种情况下，不需要对终端匹配进行重复检查。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      r.is Integer do |id|
+        r.get do
+          # Handle GET /posts/$ID
+        end
+
+        r.post do
+          # Handle POST /posts/$ID
+        end
+      end
+    end
+  end
+end
+```
+
+另一种情况，如果路由需要在检查参数之前检查请求方法，我们就不能使用终端式请求。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.get do
+      r.on "posts" do
+        r.is Integer do |id|
+          # Handle GET /posts/$ID
+        end
+      end
+    end
+
+    r.post do
+      r.on "posts" do
+        r.is Integer do |id|
+          # Handle POST /posts/$ID
+        end
+      end
+    end
+  end
+end
+```
+
+#### 提示
+
+首先通过检查 HTTP 请求的路径，再检查方法，可以减少编写重复代码。在实际的应用中，首先检查请求方法的情况很少。这种情况往往出现在绝大多数路由都使用一种请求方法，而很少的路由使用另一种请求方法。
+
+因此，当我们传递 `r.get` 和 `r.post` 匹配器的时候，通常表明剩余的路由路径仅有特定的请求方法处理。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      r.is Integer do |id|
+        r.get "show" do
+          # Handle GET /posts/$ID/show
+        end
+
+        r.post "update" do
+          # Handle POST /posts/$ID/update
+        end
+      end
+    end
+  end
+end
+```
+
