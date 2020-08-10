@@ -951,3 +951,133 @@ class App < Roda
 end
 ```
 
+如果 `r.get` 和 `r.post` 在通过匹配器猴，没有进行终端匹配，我们需要 `r.is` 进行包装。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      r.is Integer do |id|
+        r.get "show" do
+          r.is do
+            # Handle GET /posts/$ID/show
+          end
+        end
+
+        r.post "update" do
+          r.is do
+            # Handle POST /posts/$ID/update
+          end
+        end
+      end
+    end
+  end
+end
+```
+
+如上所示，这只会导致编写冗余的代码。通过使 `r.get` 和 `r.post`（如果通过任何匹配器）用作终端匹配的方法，Roda 通过牺牲了一些一致性，提高了可用性。
+
+如果我们想让 `r.get` 或 `r.post` 使用终端匹配呢？我们需要传递一个始终可以匹配成功的匹配器。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.on "posts" do
+      r.on Integer do |id|
+        r.get true do
+          # Handle GET /posts/$ID
+        end
+
+        r.is "manage" do
+          r.get do
+            # Handle GET /posts/$ID/manage
+          end
+
+          r.post do
+            # Handle POST /posts/$ID/manage
+          end
+        end
+      end
+    end
+  end
+end
+```
+
+到目前位置，我们都在讨论 `GET` 和 `POST` 请求。那么其他请求方法呢？事实上，Roda 为了保持精简，默认只支持浏览器直接可以响应的方法。因此，Roda 提供了 `all_verbs` 插件添加了额外的请求类型，这样 `r.head`，`r.put`，`r.patch` 和 `r.delete` 这些 HTTP 请求方法都可以被支持了。这些方法的行为与 `r.get` 和 `r.post` 一致， 他们用于过滤不同情况所需要的请求。
+
+```
+require "roda"
+
+class App < Roda
+  plugin :all_verbs
+
+  route do |r|
+    r.on "posts" do
+      r.is Integer do |id|
+        r.head do
+          # Handle HEAD /posts/$ID
+        end
+
+        r.get do
+          # Handle GET /posts/$ID
+        end
+
+        r.post do
+          # Handle POST /posts/$ID
+        end
+
+        r.put do
+          # Handle PUT /posts/$ID
+        end
+
+        r.patch do
+          # Handle PATCH /posts/$ID
+        end
+
+        r.delete do
+          # Handle DELETE /posts/$ID
+        end
+      end
+    end
+  end
+end
+```
+
+另外，如果我们想将 `HEAD` 请求与 `GET` 请求一样对待，除了忽略响应内容，我们还可以使用 `head` 插件。
+
+```
+require "roda"
+
+class App < Roda
+  plugin :head
+
+  route do |r|
+    r.on "posts" do
+      r.is Integer do |id|
+        r.get do
+          # Handle HEAD /posts/$ID (response body will be empty)
+          # Handle GET /posts/$ID
+        end
+
+        r.post do
+          # Handle POST /posts/$ID
+        end
+      end
+    end
+  end
+end
+```
+
+托管公共网站时，建议使用 `head` 插件，除非应用程序需要单独处理 `HEAD` 请求。否则，使用 `HEAD` 的网络爬虫可能会认为相关页面不再存在，因为对 HEAD 的请求将导致 404 请求响应。
+
+#### r.root
+
+到目前为止，我们已经看到了如何处理多个路径的请求，和处理请求的方法。那么，如何处理网站的 `root` 路径呢？
+
+
+
+
