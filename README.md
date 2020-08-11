@@ -1080,4 +1080,159 @@ end
 
 
 
+![img](/assets/root_redirect_lucidcode_root_site.png)
+
+
+
+如果我们看过之前的章节，我们会发现可以使用 `r.get` 来实现这种定义，后面跟一个空的匹配器（匹配 GET / 请求）。
+
+
+
+现在，我们返回一个无意义的字符串。
+
+
+
+```ruby
+class App < Roda
+  route do |r|
+    r.get "" do
+      "Root Path"
+    end
+
+    r.get "posts" do
+      posts = (0..5).map {|i| "Post #{i+1}"}
+      posts.join(" | ")
+    end
+  end
+end
+```
+
+
+
+当请求这个页面的时候，我们得到一个字符串。
+
+
+
+```ruby
+require "lucid_http"
+
+GET "/"
+path                            # => "http://localhost:9292/"
+body                            # => "Root Path"
+```
+
+
+
+使用这种方式，我们需要为每个 App 编写类似的路由，它的语法也不怎么漂亮。幸运的是，Roda 为这个特定的路由提供一个便利的匹配方法，称为 `r.root`。
+
+
+
+我们修改这个例子，来使用它：
+
+
+
+```ruby
+class App < Roda
+  route do |r|
+    r.root do
+      "Root Path"
+    end
+
+    # ...
+  end
+end
+```
+
+
+
+如果我们再次发起相同的请求，`r.root`将可以匹配到它，并返回相同的内容。
+
+
+
+```ruby
+require "lucid_http"
+
+GET "/"
+path                            # => "http://localhost:9292/"
+body                            # => "Root Path"
+```
+
+
+
+需要注意的是，`r.root` 等同于 `r.get ""`，而不是 `r.is ""`。其被设计为只匹配 `GET` 类型的请求。如果我们想要处理其他类型的请求， 我们需要使用 `r.is ""`。`r.root` 的优势是，它在处理 `GET` 请求时，它更清晰。
+
+
+
+假设我们现在想要使用 `/posts/:id` 路径来获取日志。我们需要添加一个路由。需要注意的是，我们修改 `posts` 匹配器，从 `r.get` 改为 `r.on`，因为现在我们不再需要终端处理了。在 `r.on "posts"`，我们有两个路由，一个返回所有日志（`GET /posts/`，注意结尾的`/`），另外一个返回指定的日志（比如 `GET /posts/1`）。
+
+
+
+```ruby
+require "roda"
+
+class App < Roda
+  route do |r|
+    # ...
+    r.on "posts" do
+      posts = (0..5).map {|i| "Post #{i}"}
+
+      r.get "" do
+        posts.join(" | ")
+      end
+
+      r.get Integer do |id|
+        posts[id]
+      end
+    end
+  end
+end
+```
+
+
+
+检查一下，看看是否正常工作。
+
+```ruby
+require "lucid_http"
+
+GET "/posts/"
+# => "Post 1 | Post 2 | Post 3 | Post 4 | Post 5"
+
+GET "/posts/1"
+# => "Post 1"
+```
+
+
+
+根据前面的介绍，使用 `r.root` 和 传递一个空字符串，给 `r.get` ，匹配方法，结果是一样的。我们修改成 `r.root`。
+
+
+
+```
+r.on "posts" do
+  posts = (0..5).map {|i| "Post #{i}"}
+
+  r.root do
+    posts.join(" | ")
+  end
+end
+```
+
+
+
+看看能否正常工作
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/"
+# => "Post 1 | Post 2 | Post 3 | Post 4 | Post 5"
+```
+
+
+
+
+
 
