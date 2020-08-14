@@ -1276,3 +1276,62 @@ end
 
 
 
+```
+require 'roda'
+
+class App
+  class RodaRequest
+    def with_params(hash, &block)
+      #
+    end
+  end
+
+  route do |r|
+    r.with_params "secret"=>"Um9kYQ==\n" do
+    end
+  end
+end
+```
+
+
+
+首先，我们先弄明白如何编写这个方法。我们传递进的参数，是一个哈希而不是匹配器，所以我们不想将它传递给另一个需要匹配器的方法。最好检查哈希是否与预期参数匹配。如果不符合预期，我们就不需要做任何事情。如果成功匹配到了，我们要将其视为匹配快。
+
+
+
+通过调用 params 方法，我们知道了提交参数。这个方法实际上来自于 Rack::Request。因此检查参数是否匹配的简单办法是如果迭代提供的哈希，然后从方法返回。
+
+
+
+```
+def with_params(hash, &block)
+  hash.each do |key, value|
+    return unless params[key] == value
+  end
+
+  #
+end
+```
+
+
+
+这只是会处理匹配失败的情况。我们该如何成功个匹配？这种情况下，如果在 `hash.each` 调用之后，我们仍在执行该方法，则我们要将给定的块视为匹配块。这是可以通过不带任何参数的块传递给 on 来处理的。（请记住on是r.on，因为r是App :: RodaRequest的实例）
+
+
+
+```
+def with_params(hash, &block)
+  hash.each do |key, value|
+    return unless params[key] == value
+  end
+
+  on(&block)
+end
+```
+
+
+
+on 将把该块视为匹配快，将控制权传递给它，并且在该块执行后，将返回响应。
+
+
+
