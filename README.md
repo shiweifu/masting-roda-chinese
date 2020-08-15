@@ -1331,7 +1331,206 @@ end
 
 
 
-on 将把该块视为匹配快，将控制权传递给它，并且在该块执行后，将返回响应。
+on 将该块视为匹配快，将控制权传递给它，并且在该块执行后，将返回响应。
+
+
+
+#### 匹配块条件控制
+
+
+
+让我们使用一个类似之前的例子，来讲解。
+
+
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    # ...
+    r.on "posts" do
+      posts = (0..5).map {|i| "Post #{i}"}
+
+      r.get true do
+        posts.join(" | ")
+      end
+
+      r.get Integer do |id|
+        posts[id]
+      end
+    end
+  end
+end
+```
+
+
+
+我们做了一个小的修改。让 `/posts/:id` 返回一个字符串，包含日志名称和访问时间。
+
+```
+class App < Roda
+  route do |r|
+    # ...
+    r.on "posts" do
+      # ...
+
+      r.get Integer do |id|
+        post        = posts[id]
+        access_time = Time.now.strftime("%H:%M")
+
+        "Post: #{post} | Accessing at #{access_time}"
+      end
+    end
+  end
+end
+```
+
+
+
+现在，当 id 为 2 的日志，将正确获取这些信息。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/2"
+body                             # => "Post: Post 2 | Accessing at 09:53"
+```
+
+
+
+在我们刚刚添加新功能时，我们引入了一个 bug。如果我们访问不存在的日志，会发生什么？
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/12"
+body                            # => "Post:  | Accessing at 09:55"
+```
+
+
+
+结果返回了一个空的日志名称，这与我们想要的相差甚远。
+
+
+
+我们可以通过添加对不存在的日志进行条件判断，来修复这个问题。
+
+```
+r.get Integer do |id|
+  if post = posts[id]
+    access_time = Time.now.strftime("%H:%M")
+    "Post: #{post} | Accessing at #{access_time}"
+  end
+end
+```
+
+
+
+如果日志存在，执行 `if` 表达式，可以获取正确的日志值，string  和 access_time 都会返回正确的值。如果日志不存在，`if` 表达式返回 `nil`，Roda 返回 404 状态码，以及空结构。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/12"
+status                            # => "404 Not Found"
+```
+
+
+
+还有一种方式，我们可以使用 `using` 方法，跳过当前 block 的其余部分，这适用于任意 Ruby 代码块。`next` 通常被用于跳过当前的迭代器，移动到下一个迭代器，但是由于每个路由块最多只能执行一次，因此它具有提前返回的行为。
+
+
+
+```
+r.get Integer do |id|
+  next unless post = posts[id]
+  access_time = Time.now.strftime("%H:%M")
+  "Post: #{post} | Accessing at #{access_time}"
+end
+```
+
+
+
+next 如果不带参数，相当于当前代码块返回 `nil`，表示日志不存在，求将返回 404 状态码（和上面使用 if 进行判断的例子一样）。但是，我们可以给 `next` 带上参数，这相当于带着参数提早返回代码块。
+
+
+
+```
+r.get Integer do |id|
+  next "No matching post" unless post = posts[id]
+  access_time = Time.now.strftime("%H:%M")
+  "Post: #{post} | Accessing at #{access_time}"
+end
+```
+
+
+
+这看起来可以正常工作，虽然没有找到日志，但是因为代码块返回了 `string`，请求被当成了成功响应。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/12"
+body                            # => "No matching post"
+status                          # => "200 OK"
+```
+
+
+
+body 的内容是正确的，但是响应码是 200，我们需要在调用 `next` 之前手动设置状态码。
+
+
+
+```
+r.get Integer do |id|
+  unless post = posts[id]
+    response.status = 404
+    next "No matching post"
+  end
+
+  access_time = Time.now.strftime("%H:%M")
+  "Post: #{post} | Accessing at #{access_time}"
+end
+```
+
+
+
+然后我们可以检查一下当前所使用的状态码和 body 的内容。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/12"
+body                            # => "No matching post"
+status                          # => "404 Not Found"
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
