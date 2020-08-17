@@ -1562,6 +1562,71 @@ end
 
 
 
+### 匹配器
+
+
+
+之前我们讨论了 Roda 默认内置的匹配器。然而那些只覆盖了很少一部分。让我们先简单看一下之前讨论过的匹配器，然后再讨论一些新的。
+
+
+
+#### 字符串匹配器
+
+
+
+字符串匹配器是最通用的匹配器。它与剩余路径中的下一节路径进行比对。
+
+```
+route do |r|
+  r.get "posts" do
+    # GET /posts
+  end
+end
+```
+
+
+
+如果字符串中包含 `/`，我们就可以在一串字符串中处理多节路径。
+
+
+
+```
+route do |r|
+  r.get "posts/today" do
+    # GET /posts/today
+  end
+end
+```
+
+
+
+当使用字符串匹配器时，它所匹配的段不会被捕获，但会被消耗（斜杠算在内）。
+
+
+
+字符串匹配器将匹配整个段，而不会匹配前面。
+
+```
+route do |r|
+  r.on "posts" do
+    # Requests for /posts and any path starting with /posts/
+    # Would not match /posts-today
+  end
+end
+```
+
+
+
+如果剩余路径不是以 `/` 开头，字符串匹配器不会进行匹配。
+
+
+
+
+
+
+
+
+
 
 
 
