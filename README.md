@@ -1621,6 +1621,211 @@ end
 
 
 
+#### 类型匹配器
+
+
+
+默认状态下，Roda 只支持两种类型的匹配器，我们前面已经看过了，分别是整数型和字符串。
+
+
+
+值得注意的是，字符串类型的匹配器，捕获并使用路径中的下一个非空段。如果剩余路径不是以斜杠开头，或者为空，则它将不匹配。
+
+
+
+```
+route do |r|
+  r.on "posts" do
+    r.on String do |seg|
+      "0 #{seg} #{r.remaining_path}"
+    end
+  end
+
+  r.on String do |seg|
+    "1 #{seg} #{r.remaining_path}"
+  end
+end
+```
+
+
+
+这是不同请求路径的例子。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts"
+status                          # => "404 Not Found"
+
+GET "/posts/"
+status                          # => "404 Not Found"
+
+GET "/posts/new"
+body                            # => "0 new "
+
+GET "/posts/new/"
+body                            # => "0 new /"
+
+GET "/posts/new/recent"
+body                            # => "0 new /recent"
+
+GET "/topics"
+body                            # => "1 topics "
+
+GET "/topics/"
+body                            # => "1 topics /"
+
+GET "/topics/new"
+body                            # => "1 topics /new"
+```
+
+
+
+整形匹配器，匹配并捕获下一节路径中的整数字符（0-9）。当捕获成功，参数会被转换为整数类型，所以在块结构中，收到的参数为整数类型。
+
+
+
+```
+route do |r|
+  r.on Integer do |seg|
+    "#{seg.inspect} #{r.remaining_path}"
+  end
+end
+```
+
+
+
+下面是一些请求调用的例子。
+
+
+
+```
+require "lucid_http"
+
+GET "/"
+status                          # => "404 Not Found"
+
+GET "/posts"
+status                          # => "404 Not Found"
+
+GET "/1a"
+status                          # => "404 Not Found"
+
+GET "/1"
+body                            # => "1 "
+
+GET "/2/"
+body                            # => "2 /"
+
+GET "/3/b"
+body                            # => "3 /b"
+```
+
+
+
+#### 自定义匹配器
+
+虽然 Roda 默认只包含 `String` 和 `Integer` 类型的匹配器，但它可以通过 `class_matchers` 插件，来使任意类型成为匹配器。加载这个插件后，我们需要调用 `class_matcher`，并带上想要注册的类型，然后通过一个正则表达式来进行匹配，最后跟一个代码块结构，来接收正则表达式处理过的数据，并在代码块中返回匹配器要传递出去的内容。（如果返回空，则不会继续执行）
+
+
+
+```
+class_matcher(Date, /(\d\d\d\d)-(\d\d)-(\d\d)/) do |y, m, d|
+ [Date.new(y.to_i, m.to_i, d.to_i)]
+end
+
+route do |r|
+  r.on Date do |date|
+    date.strftime('%m/%d/%Y')
+  end
+end
+```
+
+
+
+这个匹配器，接收年-月-日的格式，返回年/月/日类型。
+
+
+
+```
+require "lucid_http"
+
+GET "/2020-04-23"
+body                           # => "04/23/2020"
+```
+
+
+
+### 布尔类型匹配器
+
+
+
+我们已经看过布尔类型匹配器，`true`，`r.get` 或者 `r.post` 通常用于终端匹配。在布尔类型匹配器中，`true` 表示匹配成功，`false` 和 `nil` 表示匹配失败。
+
+
+
+使用 `r.get` 和 `r.post` 时，会有多个理由返回 `true` 来进行强制终端匹配。然而很少有理由返回 `false` 或者 `nil`。我们可以调用方法或者访问可能的返回值本地变量。
+
+
+
+```
+def allow?
+  request.ip == '127.0.0.1'
+end
+
+def allowed_prefix
+  "let-me-in" if allow?
+end
+
+route do |r|
+  r.on allowed_prefix do
+    "Allowed #{r.remaining_path}"
+  end
+
+  r.on allow? do
+    "Also Allowed #{r.remaining_path}"
+  end
+end
+```
+
+
+
+如果请求来自 IP 地址 `127.0.0.1`，将返回如下值：
+
+
+
+```
+require "lucid_http"
+
+GET "/"
+body                            # => "Also Allowed "
+
+GET "/posts"
+body                            # => "Also Allowed /posts"
+
+GET "/let-me-in"
+body                            # => "Allowed "
+
+GET "/let-me-in/please"
+body                            # => "Allowed /please"
+```
+
+
+
+如果请求不来自 `127.0.0.1`，`allowed_prefix` 将返回 `nil`， `allow?` 将返回false，请求收到 404 响应。
+
+
+
+
+
+
+
+
+
+
+
 
 
 
