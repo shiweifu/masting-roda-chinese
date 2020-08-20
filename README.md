@@ -1818,6 +1818,92 @@ body                            # => "Allowed /please"
 
 
 
+### 正则表达式匹配
+
+
+
+Roda 支持正则表达式匹配器。正则表达式匹配器必须匹配完整段，并且他们消耗匹配的段，并捕获任何正则表达式捕获的内容（如果正则表达式没有任何捕获，则为空）
+
+
+
+```
+route do |r|
+  r.on /posts/ do
+    # Same as "posts" string matcher
+  end
+
+  r.on /posts/i do
+    # Similar to a case insensitive string matcher
+  end
+
+  r.on /(posts|topics)/ do |seg|
+    # Match either of the two segments and yield the matched segment
+  end
+
+  r.on /posts(?:\.html)/ do
+    # Match with or without .html extension
+  end
+
+  r.on /(\d\d\d\d)-(\d\d)-(\d\d)/ do |year, month, day|
+    # Handle multiple captures (arguments yielded are strings)
+  end
+end
+```
+
+
+
+类似字符串匹配器，如果剩余路径不是以 `/` 正则表达式匹配器不会工作。
+
+
+
+### 数组匹配器
+
+
+
+使用数组作为匹配器，其中的元素必须包含其他类型的匹配器。数组中的每个成员，将会以此进行捕获，如果有一个元素捕获成功，则数组捕获成功。
+
+
+
+```
+route do |r|
+  r.get "posts", [Integer, true] do |id|
+    # GET /posts/1 matches as:
+    # * the Integer matcher matches
+    # * the remaining path is fully consumed
+    # * id is 1
+    #
+    # GET /posts matches as
+    # * the true matcher matches
+    # * the remaining path is fully consumed
+    # * no argument is yielded (id is nil)
+    #
+    # GET /posts/new does not match as
+    # * the true matcher matches
+    # * but the remaining path is not fully consumed
+  end
+
+  r.on [/members/, /topics/] do
+    # Match either of the regexp matchers
+  end
+end
+```
+
+
+
+为了提高可用性，有一个小的不一致之处。如果成员匹配器是一个字符串，则该字符串是生成的。这是为了使用捕获正则表达式的替代方法。
+
+
+
+```
+route do |r|
+  r.on ['posts', 'topics'] do |seg|
+    # Match either of the two segments and yield the matched segment
+  end
+end
+```
+
+
+
 
 
 
