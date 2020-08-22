@@ -1904,15 +1904,221 @@ end
 
 
 
+### 哈希匹配器
 
 
 
+哈希匹配器依赖匹配器的 key，key 表示哈希匹配器中，key 所对应匹配器的类型。默认支持 `:all` 和 `:method` 两种。
 
 
 
+#### :all
+
+`:all` 匹配器接受可遍历类型的值，行为与 `r.on`， `r.is`，`r.get` 和 `r.post` 相同，进行比对的路径，必须与其成员类型都匹配。通常使用 `:all` 来将多个匹配步骤，合并为一组匹配器。
 
 
 
+```
+route do |r|
+  r.get ['post', {all: ['posts', Integer]}] do |id|
+    # GET /post matches as
+    # * the first array member matches
+    # * the remaining path is fully consumed
+    # * no argument is yielded (id is nil)
+    #
+    # GET /posts/1 matches as
+    # * the first array member does not match
+    # * the second array member is then tried
+    #   * the second array member is a :all hash matcher
+    #   * all members of the :all hash matcher match
+    # * the remaining path is fully consumed
+    # * id is 1
+    #
+    # GET /posts/new does not match as
+    # * the first array member does not match
+    # * the second array member is then tried
+    #   * the second array member is a :all hash matcher
+    #   * the second member of the :all hash matcher does not match
+  end
+end
+```
+
+
+
+#### :method
+
+`:method` 哈希匹配器匹配指定的 HTTP 请求类型。当我们想要执行一个非终端匹配，同时为`r.on` 提供其他参数时，我们使用它。
+
+
+
+```
+route do |r|
+  r.on "posts", method: :post do
+    # POST requests for /posts or starting with /posts/
+  end
+end
+```
+
+
+
+我们也可以使用数组，来匹配多种 HTTP 请求类型。
+
+
+
+```
+route do |r|
+  r.on "posts", method: ['put', 'patch'] do
+    # PUT or PATCH requests for /posts or starting with /posts/
+  end
+end
+```
+
+
+
+如上所示，我们可以使用符号或者字符串，这里不区分大小写。（比对时会转换为大写）
+
+
+
+### 自定义哈希匹配器
+
+
+
+Roda 默认只提供了 `:all` 和 `:method` 两种类型的哈希匹配器，作为补充，它提供了 `hash_matcher` 插件，允许我们自定义哈希匹配器。
+
+
+
+在先前的章节，我们使用如下例子来自定义匹配方法：
+
+
+
+```
+require 'roda'
+
+class App < Roda
+  route do |r|
+    r.with_params "secret"=>"Um9kYQ==\n" do
+    end
+  end
+end
+```
+
+
+
+让我们修改这段代码，使用自定义哈希匹配器来替代自定义方法匹配器。简单来说，相较于比对参数，我们可以创建哈希匹配器，只需要简单的哈希写法，来判断名为 `secret` 的参数。
+
+
+
+```
+require 'roda'
+
+class App < Roda
+  route do |r|
+    r.on(secret: "Um9kYQ==\n") do
+    end
+  end
+end
+```
+
+
+
+与前面一样，这段代码暂时还无法工作，我们还没有添加 `secret` 哈希匹配器。我们现在来添加。在加载插件后，我们需要调用 `hash_matcher` 方法，并传递相关符号，作为哈希键值。在后面跟的代码块中，返回 `nil` 或者 `false` 来表示没有匹配成功，返回任意其他的值都表示成功。
+
+```
+require 'roda'
+
+class App < Roda
+  plugin :hash_matcher
+
+  hash_matcher(:secret) do |v|
+    params['secret'] == v
+  end
+
+  route do |r|
+    r.on(secret: "Um9kYQ==\n") do
+    end
+  end
+end
+```
+
+
+
+`hash_matcher` 插件不处理捕获。但是我们可以将捕获追加到请求的捕获中，来手动添加捕获。例如我们想在 `secret` 参数匹配成功时，操作 `key` 参数，我们可以这样做：
+
+
+
+```
+require 'roda'
+
+class App < Roda
+  plugin :hash_matcher
+
+  hash_matcher(:secret) do |v|
+    if params['secret'] == v
+      request.captures << params['key']
+    end
+  end
+
+  route do |r|
+    r.on(secret: "Um9kYQ==\n") do |key|
+    end
+  end
+end
+```
+
+
+
+#### 其他哈希匹配器插件
+
+
+
+Roda 附带了多个插件，这些插件添加了自己的哈希匹配器。`path_matchers` 包括 `:prefix`，`:suffix` 和 `:extension` 哈希匹配器。`header_matchers` 包括 `:header`，`:host`，`user_agent` 和 `:accept` 哈希匹配器。`param_matchers` 包括 `:param`，`:param!`，`:params` 和 `:params!` 哈希匹配器。
+
+
+
+#### 符号匹配器
+
+
+
+符号匹配器与字符串类型匹配器相同。他们是历史遗留产物，在新的 Roda 应用程序中，不再被推荐使用，因为字符串类型的匹配器更加直观且冗余性更低。
+
+
+
+```
+route do |r|
+  r.on :segment do |seg|
+    # same as r.on String do |seg|
+  end
+end
+```
+
+
+
+#### 自定义符号匹配器
+
+
+
+虽然默认情况下，推荐使用字符串类型的匹配器来替代符号类型匹配器，Roda 还是提供了 `symbol_matchers` 插件，允许不同的符号匹配不同的节。让我们假设我们有不同的路由接受用户名，我们的用用户名只允许6到20个字符串。我们可以使用自定义的符号匹配器，来接受用户名并对格式进行验证。
+
+
+
+```
+require 'roda'
+
+class App < Roda
+  plugin :symbol_matchers
+
+  symbol_matcher :username, /([a-z0-9]{6,20})/
+
+  route do |r|
+    r.on :username do |username|
+    end
+  end
+end
+```
+
+
+
+`symbol_matchers` 插件内置许多符号匹配器，`:d` 用于整数匹配（类似于 `Integer` 类型匹配器），`:w` 用于字母匹配，`:rest` 用于比对剩余路径的其余部分。所有这些都消耗并捕获匹配的段（如果是 :rest，则是剩余路径的其余部分）。
 
 
 
