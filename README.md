@@ -2122,6 +2122,144 @@ end
 
 
 
+#### Proc 匹配器
+
+Roda 允许我们使用 Ruby proc 作为匹配器。proc 返回非 nil 或者非 false，均视为匹配成功。我们可以使用 proc 匹配器替代条件匹配。
+
+
+
+```
+r.get Integer do |id|
+  post = posts[id]
+  r.on(proc { post }) do
+    access_time = Time.now.strftime("%H:%M")
+
+    "Post: #{post} | Accessing at #{access_time}"
+  end
+end
+```
+
+
+
+前面章节的代码，仍然可以正常工作。
+
+
+
+```
+require "lucid_http"
+
+GET "/posts/2"
+body                            # => "Post: Post 2 | Accessing at 10:09"
+
+GET "/posts/10"
+status                          # => "404 Not Found"
+```
+
+
+
+这种匹配方式让代码更复杂，而没有增加什么价值。通常，我们只在从外部获取 proc 并希望该 proc 的值用于匹配时，才使用这种方式。
+
+
+
+#### 其他
+
+
+
+默认情况下，当我们使用未定义的值作为匹配器时，Roda 将抛出 `Roda::RodaError` 异常。这是为了使用未定义的匹配器时，防止未定义的行为发生。
+
+
+
+### 其他 RodaRequest 方法
+
+
+
+#### rredirect
+
+
+
+当我们浏览到根目录的时候，我们希望页面显示日志列表。我们可以通过复制粘贴 `posts` 的处理代码，来实现。当然我们并不希望代码重复，我们来想办法解决这个问题。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.root do
+      posts = (0..5).map {|i| "Post #{i}"}
+      posts.join(" | ")
+    end
+
+    r.get "posts" do
+      posts = (0..5).map {|i| "Post #{i}"}
+      posts.join(" | ")
+    end
+  end
+end
+```
+
+
+
+我们可以通过重定向地址，来避免这个问题。可以通过调用 `r.redirect` 方法来重定向。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.root do
+      r.redirect "/posts/"
+    end
+
+    r.get "posts" do
+      posts = (0..5).map {|i| "Post #{i}"}
+      posts.join(" | ")
+    end
+  end
+end
+```
+
+
+
+我们再次通过浏览器访问网站根目录。可以发现，浏览器马上跳转到了日志列表地址。
+
+
+
+通过通过浏览器直接访问地址，浏览器会收到 `200` 状态码，而使用这种方式，浏览器会收到 `302`，并响应重定向。
+
+
+
+```
+require "lucid_http"
+
+GET "/"
+path                            # => "http://localhost:9292/"
+body                            # => ""
+status                          # => "302 Found"
+```
+
+
+
+如果我们的请求响应跳转，我们将收到期望的日志列表。
+
+
+
+```
+require "lucid_http"
+
+GET "/", follow: true
+path                            # => "http://localhost:9292/"
+body                            # => "Post 1 | Post 2 | Post 3 | Post 4 | Post 5"
+status.to_s                     # => "200 OK"
+```
+
+
+
+
+
+
+
+
+
 
 
 
