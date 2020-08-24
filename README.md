@@ -2291,6 +2291,124 @@ end
 
 
 
+```
+class App < Roda
+  route do |r|
+    r.root do
+      r.redirect "/posts/", 303
+    end
+
+    r.get "posts" do
+      posts = (0..5).map {|i| "Post #{i}"}
+      posts.join(" | ")
+    end
+  end
+end
+```
+
+
+
+如果我们想要将重定向状态码改为 303，我们可以使用 `status_303` 插件。
+
+
+
+#### r.halt
+
+
+
+Roda 允许在路由执行的任何时刻，进行返回。因为 Roda 的设计，匹配代码块的存在，这种返回也是必要的。要停止（或终止）请求的处理过程，我们可以在路由树的执行种的任意时刻，调用 `r.halt`。默认情况下，我们调用 `r.halt` 不带任何参数，这使用当前的 response 作为响应。我们可以设置状态，头，或者响应的 body，然后调用 r.halt 来停止请求的处理，并响应。
+
+
+
+```
+route do |r|
+  r.get "posts" do
+    if r.params['forbid']
+      response.status = 403
+      response.headers['My-Header'] = 'header value'
+      response.write 'response body'
+      r.halt
+    end
+
+    # not reached if forbid parameter submitted
+  end
+end
+```
+
+
+
+当 `r.halt` 使用请求的默认响应时，我们可以传递符合 rack 规范的 响应对象给 `r.halt`，来替代使用请求当前的响应。一个符合 rack 规范的响应，是一个有三个成员的数组，包含状态码（整数），头（哈希），body（一组字符串）。
+
+
+
+```
+route do |r|
+  r.get "posts" do
+    if r.params['forbid']
+      r.halt [
+        403,
+        {
+          'Content-Type'=>'text/html',
+          'Content-Length'=>'13',
+          'My-Header'=>'header value',
+        },
+        ['response body']
+      ]
+    end
+
+    # not reached if forbid parameter submitted
+  end
+end
+```
+
+
+
+`r.halt` 的默认行为，只支持使用请求的默认响应和符合 rack 规范的对象（一个数组中包含三个成员）。 Roda 也提供了 `halt` 插件，来扩展 `r.halt` ，以在返回当前响应之前，做一些修改。
+
+
+
+如果我们加载了 `halt` 插件，我们可以在返回之前，带着响应状态码调用 `r.halt`。
+
+
+
+```
+r.halt 403
+```
+
+
+
+或者带着字符串调用 `r.halt`，来作为响应的内容。
+
+
+
+```
+r.halt 'response body'
+```
+
+ 
+
+或者带着三个参数调用，同时传递状态码，响应头和内容。
+
+
+
+```
+r.halt(403, {'My-Header'=>'header value'},  'response body')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
