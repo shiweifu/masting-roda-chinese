@@ -2254,9 +2254,40 @@ status.to_s                     # => "200 OK"
 
 
 
+#### 重定向路径
 
 
 
+通常来说，如果我们想重定向到不同路径，我们将为 `r.direct` 提供单独的路径。但是，如果我们遵循 `URL` 设计，对路径的 `GET` 请求显示表单，与 `POST` 请求提交表单，使用同一路径，并且在 `POST` 之后，我们希望通一页面执行 `GET` 请求，以查看当前更新后的页面，Roda 允许我们省略路径。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.is "posts", Integer do |id|
+      @post = Post[id]
+
+      r.get do
+        @post.inspect 
+      end
+
+      r.post do
+        @post.update(updated_at: Time.now)
+        r.redirect
+      end
+    end
+  end
+end
+```
+
+
+
+#### 重定向状态码
+
+
+
+默认情况下，`r.direct` 使用 302 状态码。我们可以指定重定向方法的第二个参数，来作为状态码。
 
 
 
