@@ -2397,6 +2397,36 @@ r.halt(403, {'My-Header'=>'header value'},  'response body')
 
 
 
+使用三个参数调用 `r.halt` 和使用 rack 对象（数组中有三个元素）响应的区别是使用 rack 对象会直接返回，而使用三个参数调用，首先会更新请求的响应头和 body，然后再进行返回。
+
+
+
+#### r.run
+
+
+
+Roda 支持在路由的任何地方直接调用其他 rack 应用程序（包括其他 Roda 应用程序），以及将这些应用程序作为子路径，挂载到当前 Roda 应用程序中。
+
+假设我们开发一个管理系统前端，作为一个独立的 rack 应用程序。我们想挂载到当前应用的 `/admin` 路由上。我们将 `/admin` 设置为一个分支，并将任意对该地址的请求，发送到 `/admin` 应用中，并将 admin 的 应用作为响应返回。
+
+
+
+```
+route do |r|
+  r.on "admin" do
+    r.run AdminApp
+  end
+
+  # rest of application
+end
+```
+
+
+
+
+
+
+
 
 
 
