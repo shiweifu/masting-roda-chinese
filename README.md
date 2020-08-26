@@ -2423,7 +2423,68 @@ end
 
 
 
+### RodaResponse
 
+
+
+假设我们有一个 Roda 应用，名为 `App`，（继承自Roda），Roda 会自动初始化 `App::RodaRequest` 作为 App 类的请求父类，这点我们之前讨论过。与之相似，Roda 也会自动初始化名为 `App::RodaResponse` 的类，作为 App 的响应类，`App::RodaResponse` 继承自  `Roda::RodaResponse`。创建响应的子类的理由，与创建请求的子类理由一样，都是为了插件有更大的自定义空间。
+
+
+
+`Roda::RodaResponse` 示例比 `Roda::RodaRequest` 更简单一些。添加的方法要少很多。`Roda::RodaResponse` 实例可以访问 `status`（响应状态码）`headers`（响应头），以及body（响应内容）。在讲解 `r.halt` 的小节，我们看到了如何设置状态码和响应头。设置响应内容的方式也类似。只是响应内容要符合 rack 响应要求（对每个响应做出响应的字符串）。
+
+
+
+```
+route do |r|
+  response.status = 403
+  response.headers['My-Header'] = "header value"
+  response.body = ["response body"]
+end
+```
+
+
+
+`Roda::RodaResponse` 提供一些便捷方法。可以使用操作数组的方式来操作头。
+
+
+
+```
+route do |r|
+  response['Other-Header'] = response['My-Header']
+end
+```
+
+
+
+如在 `r.halt` 章节所示，响应支持写入内容。但是，如果使用手动方式写入内容，那么`Roda` 将忽略所在代码块的结果，并使用已经写入的内容作为响应的内容。
+
+
+
+```
+route do |r|
+  response.write 'response body'
+  'ignored'
+end
+```
+
+
+
+`Roda::RodaResponse` 同样支持使用 `redirect` 方法重定向和设置重定向状态码（默认使用302）。我们一般不直接在 `response` 上调用。而是通常在请求上调用，他们具有一致的行为（和在 response 上调用），之后也会终止请求处理。
+
+`
+
+```
+route do |r|
+  r.is 'old-path'
+    response.redirect '/new-path' # 302 status used
+  end
+
+  r.is 'other-old-path'
+    response.redirect '/other-new-path', 303
+  end
+end
+```
 
 
 
