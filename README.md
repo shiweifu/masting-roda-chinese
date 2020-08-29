@@ -2487,6 +2487,37 @@ end
 ```
 
 
+#### 路由代码块
+
+
+
+我们已经讨论了请求和响应，现在，我们继续讨论剩下的主要话题，这是路由块的范围。该路由块是在 Roda 应用程序类的新实例上下文中执行。
+
+
+
+```
+class App < Roda
+  route do |r|
+    self.class # App
+  end
+end
+```
+
+
+
+因此，对于上面给出的 Roda 应用程序（App），路由块范围是 App 的一个实例。按照设计，Roda 类（因此也是App 类）几乎没有公共实例方法，因此不会污染路由块的范围。有一些内部方法是以 `_roda_` 开头的，但除此之外仅添加了一些方法：
+
+
+
+- request 是请求对象（App::RodaRequest 实例）
+- response 是响应对象（App::RodaResponse 实例）
+- opts 是类选项（我们将在下一节讨论）
+- env 是 rack 环境的字典结构（等同于 request.env）
+- session 是当前的会话（等同于request.session）
+
+
+
+
 
 
 
