@@ -2484,8 +2484,66 @@ route do |r|
     response.redirect '/other-new-path', 303
   end
 end
+
 ```
 
+### Roda 类
+
+
+
+我们已经了解了一些有关 Roda 运行实例的基础概念，现在让我们来讨论 Roda 中的类本身。
+
+
+
+#### app，一个 rack 应用程序
+
+
+
+在之前的例子中，我们看到过，Roda 可以当作 rack 应用程序。如果我们需要在 `config.ru` 中运行 Roda（或者运行 Roda 的子类），这个特性是必要的。事实上，Roda 在内部创建了一个 rack 应用，当它被调用的时候，它传递请求的相关环境信息给内部的这个 rack应用。我们可以直接通过 `app` 来访问内部的这个 rack 应用程序。因此，`config.ru` 文件可以被修改为：
+
+
+
+```
+require "./app"
+
+run App.app
+```
+
+
+
+添加了 `.app`，此时的行为和之前没有不同，不过速度会稍微快一点。
+
+
+
+#### `freeze`，避免意外修改
+
+
+
+Roda 应用程序推荐在运行生产环境和测试的时候，将应用设为只读，这是为了避免意外造成的修改导致的运行错误或测试失败。在开发版本中，我们也可以将执行方式设为只读。但是有关代码热加载的库会依赖修改类本身。然而， `rerun` 不会用到这个特性。如果你使用 `rerun` 进行代码热加载，你可以在所有环境都使用一样的 `config.ru` 代码。
+
+
+
+```
+require "./app"
+
+run App.freeze.app
+```
+
+
+
+如果你想让开发模式下保持可修改状态，可以通过检查 `RACK_ENV` 环境变量来实现。
+
+
+
+```
+require "./app"
+
+unless ENV["RACK_ENV"] == "development"
+  App.freeze
+end
+
+run App.app
+```
 
 #### 路由代码块
 
