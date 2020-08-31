@@ -2593,6 +2593,115 @@ end
 
 
 
+#### plugin，加载插件
+
+
+
+我们之前看到过，plugin 用于为 `Roda` 应用程序加载插件。有些插件不接收参数：
+
+
+
+```
+class App < Roda
+  plugin :h
+  plugin :flash
+end
+```
+
+
+
+有些插件接收可选的参数：
+
+
+
+```
+class App < Roda
+  plugin :render
+  plugin :render, escape: true
+end
+```
+
+
+
+还有一些必须要参数：
+
+
+
+```
+class App < Roda
+  plugin :request_aref, :raise
+  plugin :match_affix, "", /(?:\/\z|(?=\/|\z))/
+end
+```
+
+
+
+当插件需要的时候，我们可以在插件加载的时候，传递代码块进去。这只在插件需要的时候会别使用。如果插件不需要，则会忽略（Ruby 的默认行为）：
+
+
+
+```
+class App < Roda
+  plugin :not_found do
+    "File Not Found"
+  end
+
+  plugin :error_handler do |e|
+    "Internal Server Error"
+  end
+end
+```
+
+
+
+#### route，设置路由代码块
+
+
+
+先前的例子已经演示，`route` 指令设置使用的路由快。我们还没讨论的是，路由快也被视为匹配快。与任何匹配快一样，如果尚未写入响应主体，并且路由块的返回值为字符串，则将其设为响应内容。因此，如果王默恩希望对所有请求使用相同响应，则无需使用 `r.on`，只需要让 `route` 块返回值即可。
+
+
+
+```
+class App < Roda
+  route do |r|
+    "Response body for all requests"
+  end
+end
+```
+
+
+
+在内部，出于性能的考虑，Roda 使用我们传递的块进行路由并由其创建一个实例方法，该方法在被当作 `rack` 应用调用的时候被使用。如果你想访问 `route` 块，我们可以使用 `route_block`。 
+
+
+
+#### 中间件处理
+
+
+
+我们可以再 `config.ru` 文件中，使用 `use` 来加载中间件，Roda 同样支持使用 `use` 在 Roda 中加载中间件。这对于依赖中间件的 Roda 应用程序来说，很有用。将中间件引用写在 `Roda` 中，可以被任意多个 `config.ru` 文件使用。
+
+
+
+```
+require 'logger'
+
+class App < Roda
+  use Rack::CommonLogger, Logger.new($stdout)
+end
+```
+
+
+
+默认情况下，中间件是作为子类被继承的，我们可以通过 `inherit_middleware` 来关闭中间件。另外，如果我么要清楚中间件堆栈，可以使用 `clear_middleware!`。比如要配置中间件加载顺序这种更高级的中间件，我们可以使用 `middleware_stack` 插件。
+
+
+
+值得注意的是，rack 中间件的工作方式与插件不同。每个 `rack` 中间件都会包装应用程序。因此，如果我们在应用程序中加载了 3 个 rack 中间件，则首先执行第一个，然后执行第二个和第三个，最后将其分发给应用程序。如果 Rack 中间件和 Roda 插件都可以满足需求，我们最好还是选择 `Roda` 插件来完成。
+
+
+
 
 
 
