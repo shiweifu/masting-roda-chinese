@@ -2766,6 +2766,124 @@ body                            # => "2 - \"update\""
 
 
 
+```
+class App < Roda
+  models = ["account", "post"]
+
+  route do |r|
+    r.on models do |model_name|
+      model_class = Object.const_get(model_name.capitalize)
+
+      # ...
+    end
+  end
+end
+```
+
+
+
+然后，我们有了用来匹配 `/post/index` 的 `index` 路由，将返回 posts 的列表。
+
+
+
+```
+class App < Roda
+  models = ["account", "post"]
+
+  route do |r|
+    r.on models do |model_name|
+      model_class = Object.const_get(model_name.capitalize)
+
+      r.get "index" do
+        model_class.all.join(" | ")
+      end
+    end
+  end
+end
+```
+
+
+
+如果我们到了这里，但是剩余路径不是 `/index`，或者请求方法不是 `GET`，我们将跳过该块，并尝试与模型的 ID进行匹配。如果接下来的一节是数字，会假定为模型的 ID。这意味着我们有兴趣对先前的模型进行操作，因此，接下来的逻辑将访问对应的模型实例。
+
+
+
+```
+class App < Roda
+  models = ["account", "post"]
+
+  route do |r|
+    r.on models do |model_name|
+      model_class = Object.const_get(model_name.capitalize)
+
+      r.get "index" do
+        model_class.all.join(" | ")
+      end
+
+      r.on Integer do |id|
+        model = model_class[id]
+
+        # ...
+      end
+    end
+  end
+end
+```
+
+
+
+最后，一旦我们找到了对应的模型，且请求是一个 `GET` 类型，对于 `show` 的请求，我们将显示模型的信息。如果是对 `update` 的 `POST` 请求，我们将更新模型实例（在这个例子中，我们将只返回我们打算更新的内容）。
+
+
+
+```
+class App < Roda
+  models = ["account", "post"]
+
+  route do |r|
+    r.on models do |model_name|
+      model_class = Object.const_get(model_name.capitalize)
+
+      r.get "index" do
+        model_class.all.join(" | ")
+      end
+
+      r.on Integer do |id|
+        model = model_class[id]
+
+        r.get "show" do
+          model.to_s
+        end
+
+        r.post "update" do
+          "Updating #{model}"
+        end
+      end
+    end
+  end
+end
+```
+
+
+
+这是一个简单的例子，它演示了如何设计路由树来一级一级的处理路径。如果需要，我们可以引入请求的数据在路径中。
+
+
+
+#### 查询字符串参数
+
+
+
+我们同样可以传递查询字符串。查询字符串在 URL 的末尾，以问号作为开头标记，使用 `key=value` 串作为内容，多个查询字符串以 `&` 进行分割。
+
+
+
+
+
+
+
+
+
 
 
 
