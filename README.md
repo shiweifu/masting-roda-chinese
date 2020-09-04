@@ -2878,6 +2878,69 @@ end
 
 
 
+来看个例子：我们将 `post` 参数值设为 42，`action` 值为设为 `show`
+
+
+
+```
+http://localhost:9292?post=42&action=show
+```
+
+
+
+这种请求方式，通常用于使用 `GET` 请求提交数据的时候。最常见的使用场景就是搜索。让我们来假设有一组文章，我们希望通过 q 参数传递搜索条件。
+
+
+
+我们来添加一个 `GET` 请求，来处理 `/search` 路径，用来执行我们的搜索请求。我们调用请求对象的 `r.query_string` 实例方法，并作为响应内容返回（query_string 方法来自 `Rack::Request` 对象）。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.get "search" do
+      r.query_string
+    end
+  end
+end
+```
+
+
+
+此时当我们浏览 `http://localhost:9292/search?q=article`，我们看到 `r.query_string` 被返回。
+
+
+
+```
+require "lucid_http"
+
+GET "/search?q=article"
+body   
+```
+
+
+
+我们可以解析这段字符串为 key value 形式，这个方法已经内置，通过 `r.params` 可以使用（这个方法同样来自 Rack::Request）。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.on "search" do
+      r.params.inspect
+    end
+  end
+end
+```
+
+
+
+
+
+
+
 
 
 
