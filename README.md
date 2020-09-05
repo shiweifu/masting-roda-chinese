@@ -2937,6 +2937,107 @@ end
 
 
 
+当我们浏览  http://localhost:9292/search，并传递 `q` 作为查询字符串参数时，我们可以在终端中看到解析为哈希结构的参数。如果我们添加另一个查询参数，我们将在终端中看到新的结构被输出。
+
+```
+require "lucid_http"
+
+GET "/search?q=article"
+body                    # => "{\"q\"=>\"article\"}"
+
+GET "/search?q=article&category=video"
+body                   # => "{\"q\"=>\"article\", \"category\"=>\"video\"}"
+```
+
+
+
+现在，我么可以动手修改我们的路由了。我们想搜索所有包含请求中 `q` 参数的文章，并将这些文章内容合并在一起，返回一个字符串。
+
+
+
+```
+class App < Roda
+  ARTICLES = [
+    "This is an article",
+    "This is another article",
+    "This is a post",
+    "And this is whatever you want it to be",
+  ]
+
+  route do |r|
+    r.on "search" do
+      ARTICLES.filter do |article|
+        article.include?(r.params["q"])
+      end.join(" | ")
+    end
+  end
+end
+```
+
+
+
+当我们查找 `article` 关键字，我们会收到所有包含 `article` 的文章。
+
+
+
+```
+require "lucid_http"
+
+GET "/search?q=article"
+body        
+```
+
+
+
+如果您之前是 Rails 开发者，您可能好奇是否可以使用符号的方式来获取参数，答案是不可以。`r.params` 返回一个 Ruby 哈希结构，哈希是区分符号和字符串的。这也提现了 Roda 是非侵入式的，他使用了 Ruby 核心类，并且没有修改其默认行为以适应一些场景。如果我们熟悉 Ruby 核心类是如何工作的，我们会发现 Roda 易于理解。
+
+
+
+上面的例子还存在一个小问题。如果我们直接访问搜索页，而没有带 `q` 参数会发生什么？我们可以试一下，将会看到抛出了 `TypeError`，因为 `r.params[q]` 是 `nil`，而 `String#include?` 不能接收 `nil` 作为参数。类似问题也存在于 q 被解析为数组或者哈希（都有可能）
+
+
+
+有多种方式可以修复这个问题。一种是将 `r.params["q"]` 转换为字符串。这样做的好处是可以处理所有输入而不会出错。但是由于 `nil` 会转换为空字符串，这将会导致不指定显示所有文章的 `q` 参数而直接进入搜索页面。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.on "search" do
+      ARTICLES.filter do |article|
+        article.include?(r.params["q"].to_s)
+      end.join(" | ")
+    end
+  end
+end
+```
+
+
+
+另一种方式是使用 Ruby  内置的标准类型判断：
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.on "search" do
+      case q = r.params["q"]
+      when String
+        ARTICLES.filter do |article|
+          article.include?(q)
+        end.join(" | ")
+      else
+        "Invalid q parameter"
+      end
+    end
+  end
+end
+```
+
+
+
 
 
 
