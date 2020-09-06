@@ -3038,6 +3038,71 @@ end
 
 
 
+#### 请求内容的参数
+
+另外一种方式处理请求中所提交的数据是通过 `POST` 方法。当浏览器通过 `POST` 提交时，数据在请求的`body` 中，这点与写在请求字符串中不同。
+
+
+
+我们增加一个例子。我们想提交 `POST` 请求到 `http://local:9292/articles`，并接收 `content` 中的参数，以此来创建文章。
+
+
+
+这个路由目前还不存在，我们调用会收到 `404` 状态码。
+
+
+
+```
+require "lucid_http"
+
+POST "/articles", form: {content: Time.now.strftime("%H:%M:%S") }
+body                            # => ""
+status   
+```
+
+
+
+我们使用 `r.post`，以及 `articles` 这个地址进行匹配。在匹配块中，我们需要解析请求发来的请求中的数据。可以使用与查询时相同的方式进行解析，即通过 `r.params` 方法。`r.params` 同时可以处理查询字符串以及请求 body。
+
+
+
+如果被匹配到，我们可以将内容中的参数创建新的文章，以及返回最新的文章创建时间，以及文章统计现有的文章。
+
+
+
+```
+r.post "articles" do
+  ARTICLES << r.params["content"]
+  "Latest: #{ARTICLES.last} | Count: #{ARTICLES.count}"
+end
+```
+
+
+
+现在，我们再次尝试，我们将看到文章已经被添加。
+
+
+
+```
+require "lucid_http"
+
+POST "/articles", form: {content: Time.now.strftime("%H:%M:%S")}
+# => "Latest: 12:13:38 | Count: 5"
+
+sleep 2
+
+POST "/articles", form: {content: Time.now.strftime("%H:%M:%S")}
+# => "Latest: 12:13:40 | Count: 6"
+```
+
+
+
+这个例子和之前的例子具有相同的问题，当我们提交的内容不包含 `content` 参数，将会发生意料之外的行为（本例中，`nil` 会被添加到数组中）我们想要确保 `r.params["content"]` 必须为一个有效的字符串。
+
+
+
+我们可以看到，`r.params` 合并了查询字符串以及请求 `body` 参数。通常，我们不需要区分这些，如果想要区分，我们可以在 `r.GET` 中处理查询参数，在 `r.POST` 处理请求 body 参数（两种方式都来自 `Rack::Request`）。
+
 
 
 
