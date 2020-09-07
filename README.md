@@ -3105,7 +3105,39 @@ POST "/articles", form: {content: Time.now.strftime("%H:%M:%S")}
 
 
 
+`Roda` 依赖 rack 解析 body，因此，它仅能处理 rack 支持的请求内容解析，包括 `application/x-www-form-urlencoded` 和 `multipart/form-data`。`HTTP` 支持其他类型的请求，对于 `JSON` 请求，请求的类型通常是 `application/json`，如果我们使用 json_parser 插件，`Roda` 可以处理这些请求。
 
+
+
+#### 请求头部
+
+
+
+最后要访问请求的数据，是请求头部。内置访问请求头部的方式是通过环境变量哈希（env）。环境变量通过哈希的方式，包含所有请求的头部，但 rack 将头部的 keys 转换为大写，并在前面增加了 `HTTP_` 字符串（`Content-Type` 和 `Content-Length` 是个例外）。所以，如果我们想要访问 `My-Foo` 头，我们需要使用 `env["HTTP_MY_FOO"]`。
+
+
+
+如果我们不能记住这条规则，我们可以使用 request_headers 插件，引入侯，我们就可以使用 `headers["My-Foo"]` 来访问了。
+
+
+
+### Roda 插件
+
+
+
+Roda 的哲学并非是所有功能开箱即用。如果我们理解这一点，，我们就已经理解了 95% 的 Roda 核心内容。
+
+
+
+然而，Roda 并非只包括 Roda 核心。就代码而言，Roda 核心不到 Roda 整个项目的 15%。Roda 其余的 85%，是通过插件来实现的。有一些插件，在大多数应用程序中都会被用到。另外一些插件，只在某些特定应用中会被使用，除了这些，其他应用几乎不用。本章覆盖了一些最常用的插件，以及他们的用法。而没有包含一些特殊的插件的使用。
+
+
+
+要想找到插件列表，我们可以访问 Roda 网站： [http://roda.jeremyevans.net](http://roda.jeremyevans.net/)，并点击文档连接。在那里能找到插件列表。点击一个插件将看到我们使用 `RDoc` 生成的插件信息及使用介绍。
+
+
+
+我们现在开始讨论插件和插件的渲染，或者处理响应。
 
 
 
