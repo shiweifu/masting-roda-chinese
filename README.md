@@ -3170,6 +3170,79 @@ end
 
 
 
+对于这个 `Roda` 应用程序，任何请求都将收到 `404` 状态。可以尝试访问 `http://localhost:9292/dave.html `，验证是否存在。
+
+```
+require "lucid_http"
+
+GET "/dave.html"
+status                          # => "404 Not Found"
+```
+
+现在，我们将看到加载和使用 `public` 插件，行为所发生的变化。如之前章节所述，要添加插件，我们需要调用 `plugin` 类方法，并传递插件的名称（在本例中是 `:public`）的符号形式。
+
+
+
+注意，在本项目中，我们没有添加任何新的 gems，`Roda` 已经包含了本插件，而 `public` 插件也不需要依赖任何其他包。我们也不需要`require` 语句。Roda 已经自动引入插件文件。
+
+
+
+`public` 增加了 `r.public` 方法。当我们在 `route` 块中调用调用 `r.public` 方法，它会对这个路径增加一个静态文件服务。
+
+
+
+```
+class App < Roda
+  plugin :public
+
+  route do |r|
+    r.public
+  end
+end
+```
+
+
+
+默认情况下，`public` 插件为 `<app root>/public` 目录（`<app root>` 由应用的 `:root`来进行配置的）。让我们创建 `public` 目录，然后添加一些文件。
+
+
+
+```
+  Dir.mkdir("public")
+  Dir.chdir("public")
+
+  %w[chris dave matt pete].each_with_index do |doc_name, i|
+    doc_num = i + 9
+    File.write("#{doc_name}.html", <<CONTENT)
+<h2>My name is #{doc_name.capitalize} <h2>
+<h3>and I'm ##{doc_num}</h3>
+CONTENT
+    end
+  end
+```
+
+
+
+现在我们已经添加了 `public` 文件夹，尝试访问 `http://localhost:9292/dave.html`，我们将看到正常渲染的页面和 `200` 状态码。
+
+
+
+```
+require "lucid_http"
+
+GET "/dave.html"
+body               # => "<h2>My name is Dave <h2>\n<h3>and I'm #10</h3>\n"
+status             # => "200 OK"
+```
+
+
+
+
+
+
+
+
+
 
 
 
