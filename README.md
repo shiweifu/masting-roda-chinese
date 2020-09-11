@@ -3237,6 +3237,253 @@ status             # => "200 OK"
 
 
 
+如果我们想用 `static` 目录替换 `public` 目录来提供文件服务，我们需要在加载插件的时候，传递 `:root` 选项。
+
+
+
+```
+class App < Roda
+  plugin :public, root: "static"
+
+  route do |r|
+    r.public
+  end
+end
+```
+
+
+
+现在，重启我们的应用，然后插件配置生效。此时，`public` 目录被替换为 `static` 目录。当我们的变更生效时，再次访问，会受到 `404` 状态码，因为目录还不存在。
+
+
+
+```
+require "lucid_http"
+
+GET "/dave.html"
+body                          # => ""
+status                        # => "404 Not Found"
+```
+
+
+
+然后我们将 `public` 目录改名为 `static`，
+
+
+
+```
+File.rename('public', 'static')
+```
+
+
+
+再次重试，一切恢复正常。
+
+
+
+```
+require "lucid_http"
+
+GET "/dave.html"
+body               # => "<h2>My name is Dave <h2>\n<h3>and I'm #10</h3>\n"
+status             # => "200 OK"
+```
+
+
+
+使用 `public` 插件一个特性是，我们服务的目录来自子目录。所以如果我们想访问 `static` 目录的文件，但是想在路径前增加 `/static`，我们可以在 `r.on "static"` 中调用  `r.public` 来实现。
+
+
+
+```
+class App < Roda
+  plugin :public, root: "static"
+
+  route do |r|
+    r.on "static" do
+      r.public
+    end
+  end
+end
+```
+
+
+
+我们再次发送相同的请求，会收到 `404` 状态码，因为目录还不存在。然而，如果我们在请求前面加上 `/static` 前缀，就可以找到正确的内容。
+
+
+
+```
+require "lucid_http"
+
+GET "/dave.html"
+body                          # => ""
+status                        # => "404 Not Found"
+
+GET "/static/dave.html"
+body               # => "<h2>My name is Dave <h2>\n<h3>and I'm #10</h3>\n"
+status             # => "200 OK"
+```
+
+
+
+`public` 插件另一个优秀的特性是，所服务的文件，支持使用 `gzip` 或者 `brotli` 进行压缩。如果请求表明支持 `gzip` 或 `brotli` 特性，则会收到压缩过的文件。未被压缩的文件，性能会更高一些，因为省去了压缩和解压缩的时间，相应的，可以通过想办法减小传输文件的体积，来增加传输速度。
+
+
+
+让我们创建一个被压缩过的文件，以及删除原始文件。
+
+
+
+```
+require 'zlib'
+
+Zlib::GzipWriter.open('static/dave.html.gz') do |gz|
+  gz.write(File.read('static/dave.html'))
+end
+File.delete('static/dave.html')
+```
+
+
+
+然后修改插件的选项，使用 `:gzip` 设置。
+
+
+
+```
+class App < Roda
+  plugin :public, root: "static", gzip: true
+
+  route do |r|
+    r.on "static" do
+      r.public
+    end
+  end
+end
+```
+
+
+
+然后我们来通过请求来检查这项特性是否可以正确工作，确保只有 `gzipped` 版的文件存在。
+
+
+
+```
+require "lucid_http"
+
+GET "/static/dave.html"
+body               # => "<h2>My name is Dave <h2>\n<h3>and I'm #10</h3>\n"
+status             # => "200 OK"
+```
+
+
+
+需要注意的是，在生产环境中，同一个文件我们需要确保压缩过的和没压缩过的都存在，这样可以提供更好的兼容性。
+
+
+
+### 生成 HTML
+
+
+
+目前为止，我们一直使用 Roda 返回一小段字符串作为相应。这有点脱离真实环境。大多数现实场景使用 HTML 作为页面，或者 HTML 片段，或者 JSON。Roda 内核并不支持这些形式的返回值，正常情况下，我们返回 HTML 或者 JSON 二者其一。Roda 核心努力让自身变的更小，这些高级特性通过插件来实现。
+
+
+
+在大多数 Web 应用生产环境，我们不会在路由处理中，直接返回响应主体。大多数应用程序将使用专用方法处理响应主体的创建。在本节中，我们将展示如何将生成主体的代码从路由树直接返回改为使用拆分的模板，并从模板中返回内容。从模板读取内容并返回主体的过程，通常被称为 `渲染`。
+
+
+
+假设我们需要编写一个 to-do list 应用。我们以空行作为分割，每一行返回一项任务。
+
+
+
+```
+require "roda"
+require "./models"
+
+class App < Roda
+  route do |r|
+    r.root do
+      Task.all.map(&:title).join("\n")
+    end
+  end
+end
+```
+
+
+
+查看命令行输出内容，与设想的一致。
+
+
+
+```
+require "lucid_http"
+
+GET "/"
+puts body
+
+# Play Battletoads
+# Learn how to force-push
+# Find radioactive spider
+# Rescue April
+# Add red setting to sonic screwdriver
+# Fix lightsaber
+# Shine claws
+# Saw cape
+# Buy Blue paint
+# Repaint TARDIS
+```
+
+
+
+在浏览器中查看，展示上会有些不正常，因为 `Content-Type` 使 `text/html`（Roda 默认），但我们返回的内容是 `plain text`。所以换行被转换为空格。
+
+
+
+如果我们想要在浏览器中显示的正常，我们需要返回 HTML 格式的内容。我们可以使用无序列表和复选框来展示任务。
+
+
+
+一种方式是为每一个任务项目后面添加空白的字符串，并将该字符串作为响应正文返回。这是可行的，但是很难看，而且维护困难。
+
+
+
+```
+route do |r|
+  r.root do
+    result = String.new
+    result << "<ul>"
+    Task.all.each do |task|
+      result << "<li class=\"#{task.done? ? :done : :todo}\">"
+      result << "  <input type=\"checkbox\"#{" checked" if task.done?}>"
+      result << "    #{task.title}"
+      result << "</li>"
+    end
+    result << "</ul>"
+    result
+  end
+end
+```
+
+
+
+我们可以将生成逻辑拆分为独立的方法，或者添加一些帮助方法。但是最终构建代码还是很长。Roda 通过 `render` 插件来支持模板，许多框架也有类似的机制。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
