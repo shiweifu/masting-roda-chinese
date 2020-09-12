@@ -3472,7 +3472,47 @@ end
 
 
 
+#### render（渲染）
 
+
+
+使用 `render` 插件，我们可以删除上面构建页面的冗余代码，替换为 `render` 方法，传递模板的名字。
+
+
+
+开始使用 `render` 插件之前，我们首先需要安装 `tilt`。这个 `gem` 被 `render` 用来渲染模板。我们将 `tilt` 添加到 `Gemfile` 文件中，然后执行 `bundle install`。
+
+
+
+```
+source "https://rubygems.org"
+
+gem "roda"
+gem "puma"
+gem "tilt"
+```
+
+
+
+安装 `gem` 之后，我们可以使用 `render` 插件了。我们将在应用程序中加载，然后尝试渲染模板。
+
+
+
+```
+class App < Roda
+  plugin :render
+
+  route do |r|
+    r.root do
+      render "tasks"
+    end
+  end
+end
+```
+
+
+
+然后我们尝试一下，看看得到什么。由于尚未创建模板文件，会出现一个错误。错误消息很有用，现在我们知道插件在哪个文件夹寻找文件。正如扩展名所示，插件期望的默认模板语言是 erb，并且期望目录在 `views` 中。
 
 
 
