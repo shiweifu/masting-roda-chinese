@@ -3516,7 +3516,178 @@ end
 
 
 
+```
+require "lucid_http"
 
+GET "/"
+error
+# => "Errno::ENOENT: No such file or directory @ " \
+#    "rb_sysopen - /home/lucid/code/my_app/views/tasks.erb"
+```
+
+
+
+所以我们创建 `views` 目录和 `views/tasks.erb` 文件。在 `views/tasks.erb` 文件中，我们可以添加模板代码。我们不止可以返回 `HTML`片段，也可以在其中返回完整的 HTML 页面。
+
+
+
+我们给 `HTML` 文件加上标题，对于列表中的任务，我们把他们逐项列出。条目的选中状态由 `done` 和 `todo` 来判断，配合 `li` 元素进行显示。在列表条目内部，增加 `checkbox`，当任务完成时，显示选中状态。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <h2>Tasks</h2>
+    <ul>
+      <% @tasks.each do |task| %>
+        <li class="<%= task.done? ? :done : :todo %>">
+          <input type="checkbox"<%= " checked" if task.done? %>>
+          <%= task.title %>
+        </li>
+      <% end %>
+    </ul>
+  </body>
+</html>
+```
+
+
+
+再次尝试，我们收到 `NoMethodError` 错误。这是意料之中，因为我们还没有传递 `@tasks` 实例变量。
+
+
+
+```
+require "lucid_http"
+
+GET "/"
+error
+# => "NoMethodError: undefined method `each' " \
+#    "for nil:NilClass for #<App:0x00000001bd6ba8>"
+```
+
+
+
+我们可以在渲染模板前，设置 `@tasks` 变量的值，来修复这个问题。
+
+
+
+```
+class App < Roda
+  plugin :render
+
+  route do |r|
+    r.root do
+      @tasks = Task.all
+      render "tasks"
+    end
+  end
+end
+```
+
+
+
+当我们访问这个页面，我们看到了一个标准的列表。
+
+
+
+![img](.\assets\render_render_working.png)
+
+在路由树中设置变量，即允许在视图中进行访问，因为视图与路由在同一代码作用域下。在路由树中设置实例变量后，无需再额外传递给视图。
+
+
+
+除了上面介绍这种传递实例变量的方法，我们直接将实例变量作为参数传递给渲染方法也可以传递实例变量。
+
+
+
+明确传递变量的方式是使用 `:locals` 作为 `render` 方法的参数名进行传递，`locals` 的内容是一个哈希结构，传递完之后，在视图中，即可访问。
+
+
+
+```
+class App < Roda
+  plugin :render
+
+  route do |r|
+    r.root do
+      render "tasks", locals: { tasks: Task.all }
+    end
+  end
+end
+```
+
+
+
+使用 `locals` 参数传递后，我们将 `@tasks` 修改为 `tasks` 来进行访问。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <h2>Tasks</h2>
+    <ul>
+      <% tasks.each do |task| %>
+        <li class="<%= task.done? ? :done : :todo %>">
+          <input type="checkbox"<%= " checked" if task.done? %>>
+          <%= task.title %>
+        </li>
+      <% end %>
+    </ul>
+  </body>
+</html>
+```
+
+
+
+通常来说，使用实例变量进行传递的方式更加值得推荐。这种方式会有更好的性能，更少的代码。也有些开发者更习惯使用 `locals` 参数的方式明确传递变量。本书余下部分，大多数情况下都会使用实例变量的方式将变量传递给视图。后面也会演示一种适合使用 `locals` 传递变量的场景。
+
+
+
+现在来美化一下列表。我们简单的将样式写在 `head` 标签里，增加一下颜色区分，删除前面的圆点。圆点在 `checkbox` 样式下，显得很奇怪。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <ul>
+      <% @tasks.each do |task| %>
+        <li class="<%= task.done? ? :done : :todo %>">
+          <input type="checkbox"<%= " checked" if task.done? %>>
+          <%= task.title %>
+        </li>
+      <% end %>
+    </ul>
+  </body>
+</html>
+```
+
+
+
+重新加载，可以看到样式已经生效。
+
+
+
+![img](.\assets\render_render_working_with_css.png)
 
 
 
