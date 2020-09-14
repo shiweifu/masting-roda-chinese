@@ -3689,7 +3689,96 @@ end
 
 ![img](.\assets\render_render_working_with_css.png)
 
+现在，列表变得更加漂亮了，我们来增加下一个特性：显示指定任务的详情。我们先来添加新的路由，给要使用的实例变量赋值，然后渲染视图。
 
+
+
+```
+route do |r|
+  r.root do
+    @tasks = Task.all
+    render "tasks"
+  end
+
+  r.get "tasks", Integer do |id|
+    next unless @task = Task[id]
+    render "task"
+  end
+end
+```
+
+
+
+然后添加 `views/task.erb` 文件。在这个文件中，我们需要展示任务标题，任务是否完成，还有它的截止日期。我们把之前的 `erb` 代码复制过来进行修改。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <h2><%= @task.title %></h2>
+    <% if @task.done? %>
+      <span class="done">[DONE]</span>
+    <% else %>
+      <span class="todo">[TODO]</span>
+    <% end %>
+    <h3>Due Date: <%= @task.due.strftime("%v") %></h3>
+  </body>
+</html>
+```
+
+
+
+我们再试一次，就会看到新的模板被渲染出来。这是已经完成的任务。
+
+
+
+![img](.\assets\render_render_single_task_done.png)
+
+这是个任务没完成时的样子。
+
+
+
+![img](.\assets\render_render_single_task_undone.png)
+
+### 布局
+
+
+
+我们现在有两个不同的模板，代码有可优化的空间。我们使用相同的 HTML 结构，CSS 样式和标题，我们每个需要展示的页面都重复这些内容。
+
+
+
+如果我们想改变基础的布局，比如 `done` 状态的颜色增加绿色阴影，我们需要把每个视图都改一遍。
+
+
+
+我们可以通过将 `render` 替换为 `view`，来修复重复编写代码的问题。
+
+
+
+```
+route do |r|
+  r.root do
+    @tasks = Task.all
+    view "tasks"
+  end
+
+  r.get "tasks", Integer do |id|
+    next unless @task = Task[id]
+    view "task"
+  end
+end
+```
 
 
 
