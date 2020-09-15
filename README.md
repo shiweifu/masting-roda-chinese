@@ -3782,9 +3782,136 @@ end
 
 
 
+当尝试加载任意页面时，我们会收到 `layout.erb` 没有找到的问题。
 
 
 
+```
+require "lucid_http"
+
+GET "/"
+error
+# => "Errno::ENOENT: No such file or directory @ " \
+#    "rb_sysopen - /home/lucid/code/my_app/views/layout.erb"
+```
+
+
+
+接下来，我们将页面相同的代码，移动到布局视图中，在布局中，我们使用 `yield` 语句，来插入不同页面的内容。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%= yield %>
+  </body>
+</html>
+```
+
+
+
+我们可以更新 `tasks.erb` 模板。
+
+
+
+```
+<h2>Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <li class="<%= task.done? ? :done : :todo %>">
+      <input type="checkbox"<%= " checked" if task.done? %>>
+      <%= task.title %>
+    </li>
+  <% end %>
+</ul>
+```
+
+
+
+接着更新 `task.erb` 模板。
+
+
+
+```
+<h2><%= @task.title %></h2>
+<% if @task.done? %>
+  <span class="done">[DONE]</span>
+<% else %>
+  <span class="todo">[TODO]</span>
+<% end %>
+<h3>Due Date: <%= @task.due.strftime("%v") %></h3>
+```
+
+
+
+最后，来检查一下是否工作正常。
+
+
+
+配合 `view` 方法，来渲染视图时，特定于页面的视图在布局视图之前呈现。这很有用，它允许我们在页面特定的视图中设定实例变量，并在布局中访问他们，比如用于设置 HTML 页面标题。我们来修改一下布局文件，以使用 `@page_title` 实例变量来自定义页面标题，并将前一个标题用作备用。
+
+
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%= yield %>
+  </body>
+</html>
+```
+
+
+
+更新 `tasks.erb` 视图，以设置 `@page_title`。
+
+```
+<% @page_title = "All Tasks" %>
+
+<h2>Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <li class="<%= task.done? ? :done : :todo %>">
+      <input type="checkbox"<%= " checked" if task.done? %>>
+      <%= task.title %>
+    </li>
+  <% end %>
+</ul>
+```
+
+
+
+同样可以更新 `task.erb` 来设置 `@page_title`。
+
+```
+<% @page_title = "Task: #{@task.title}" %>
+
+<h2><%= @task.title %></h2>
+<% if @task.done? %>
+  <span class="done">[DONE]</span>
+<% else %>
+  <span class="todo">[TODO]</span>
+<% end %>
+<h3>Due Date: <%= @task.due.strftime("%v") %></h3>
+```
 
 
 
