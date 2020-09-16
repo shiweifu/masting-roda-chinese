@@ -3915,6 +3915,124 @@ error
 
 
 
+#### content_for
+
+
+
+在一些场景下，布局可能有一些地方，需要使用页面提供的内容，而不仅仅是一种内容。虽然我们可以给一个变量复制，然后传递给布局来实现，但这样会写许多丑陋的代码。如果要返回的内容比较多，尤其明显。
+
+
+
+下面的例子，我们来假设我们想添加一个`footer` 到我们的页面。我们想为 `footer` 提供不一样的模板。让我们改变一下我们的视图。默认情况下，我们已经有了 `footer.erb` 来提供默认的 footer。我们可以在布局文件中使用 `render("footer")` 来渲染 `footer` 视图。
+
+
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%= yield %>
+    <div class="footer">
+      <%= render("footer") %>
+    </div>
+  </body>
+</html>
+```
+
+ 
+
+简化的 `footer.erb` 视图：
+
+```
+This is the footer.
+```
+
+
+
+这为所有页面添加了同样的 `footer`。假设我们想让页面的 `footer` 显示所有任务，以替代任务数量。我们需要传递 `footer` 的内容到 `tasks.erb` 视图，然后修改视图以使用它。要完成这一点，我们通过使用 `content_for` 插件来完成，本插件允许将内容存储在一个模板文件中，然后在另一个模板中显示。我们首先来激活这个插件。
+
+```
+class App < Roda
+  plugin :render
+  plugin :content_for
+
+  route do |r|
+    r.root do
+      @tasks = Task.all
+      view "tasks"
+    end
+
+    r.get "tasks", Integer do |id|
+      next unless @task = Task[id]
+      view "task"
+    end
+  end
+end
+```
+
+接下来，让我们更新 `tasks.erb` 视图以存储自定义 `footer` 来展示多少总共有多少任务。在这个视图中，我们可以在代码块中，调用 `content_for` 方法，然后在其中返回内容。
+
+```
+<% @page_title = "All Tasks" %>
+
+<h2>Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <li class="<%= task.done? ? :done : :todo %>">
+      <input type="checkbox"<%= " checked" if task.done? %>>
+      <%= task.title %>
+    </li>
+  <% end %>
+</ul>
+<% content_for(:footer) do %>
+  There are <%= tasks.length %> tasks total.
+<% end %>
+```
+
+
+
+最后，让我们更新 `layout.erb` 文件，如果页面提供了自定义的 `footer`，就显示自定义的 `footer`，否则就使用默认的 `footer`。在布局文件中，我们调用 `content_for`，而不用传递代码块，这将返回存储的内容，如果 `content` 没有存储，将返回空。所以，如果 `footer` 的内容被传递，它将被使用，如果没有传递，则使用默认的 `footer`。
+
+
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%= yield %>
+    <div class="footer">
+      <%= content_for(:footer) || render("footer") %>
+    </div>
+  </body>
+</html>
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
