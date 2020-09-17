@@ -4025,13 +4025,111 @@ end
 
 
 
+#### 过滤内容
 
 
 
+当前模板存在一个问题，导致他们不能过滤某些内容而无法正常显示。如果未来内容被输入控制，会造成跨站脚本攻击（XSS）。要杜绝这种攻击，我们需要过滤输出。
 
 
 
+在本书先前部分，我们了解了 `h` 插件，以及如何使用它在显示前过滤内容。在这里我们也可以使用它对每次想输出的内容进行过滤。我们来演示一下在 `task.erb` 文件中使用 `h` 插件。
 
+
+
+```
+<% @page_title = "Task: #{h @task.title}" %>
+
+<h2><%=h @task.title %></h2>
+<% if @task.done? %>
+  <span class="done">[DONE]</span>
+<% else %>
+  <span class="todo">[TODO]</span>
+<% end %>
+<h3>Due Date: <%= @task.due.strftime("%v") %></h3>
+```
+
+
+
+糟糕的是，这种使用方式很容易出错，因为在大型应用程序中，我们很可能会忘记进行转义（请注意，上述模板中两个位置都使用了 `h`）。幸运的是，Roda 提供了更好的解决方式。除了过滤我们知道不好的内容以外，我们还可以过滤我们没有意识到的可能有问题的内容（好的内容是指我们已经过滤过的内容）。
+
+
+
+我们通过 `render` 插件，以及 `:escape` 选项来开启。 这种自动转义过滤，依赖 `erubi` gem，所以我们需要在 `Gemfile` 中添加它，并执行 `bundle install`。
+
+
+
+```
+source "https://rubygems.org"
+
+gem "roda"
+gem "puma"
+gem "tilt"
+gem "erubi"
+```
+
+
+
+安装 `erubi` gem之后，我们可以使用 `render` 插件以及 `:escape` 选项了。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  # ...
+end
+```
+
+
+
+这种方式使我们可以删除 `task.erb` 视图中的手动过滤转义，`h2`标签中的 `@title` 也会被自动转义。即使内容不需要转义，`h3 `中的 `@task.due.strftime("%v")` 也会被输出。
+
+
+
+```
+<% @page_title = "Task: #{@task.title}" %>
+
+<h2><%= @task.title %></h2>
+<% if @task.done? %>
+  <span class="done">[DONE]</span>
+<% else %>
+  <span class="todo">[TODO]</span>
+<% end %>
+<h3>Due Date: <%= @task.due.strftime("%v") %></h3>
+```
+
+
+
+在布局视图中，我们只需要做一个改变，调用一下 `yield，将已经处理过的内容输出插入到这里。我们可以通过增加一个 `=` 来实现。
+
+
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <style>
+      ul { list-style: none; }
+      ul .todo { color: red;}
+      ul .done { color: green;}
+    </style>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%== yield %>
+  </body>
+</html>
+```
+
+
+
+在指定页面输出中，不会被过滤。但使用自动转义时，如果我们要输出已经转义过的值，我们只需要记住使用双等号输出标签而不是单等号。
+
+
+
+`render` 插件包含更多可配置的高级项目，`:escape` 选项已经在前面展示过。可以在 [`render` 插件文档](http://roda.jeremyevans.net/rdoc/classes/Roda/RodaPlugins/Render.html)查看更多信息。
 
 
 
