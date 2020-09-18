@@ -4133,6 +4133,44 @@ end
 
 
 
+### 视图子目录
+
+
+
+可以在 `views` 文件夹中放置所有模板文件，这在小型应用中，工作的很好。但是程序规模一大，就需要使用子目录进行组织模板文件了。我们接下来会演示如何来进行组织。让我们创建 `views/tasks` 子目录，并把它移动到 `views` 文件夹中。
+
+
+
+```
+Dir.mkdir('views/tasks')
+File.rename('views/tasks.erb', 'views/tasks/index.erb')
+File.rename('views/task.erb', 'views/tasks/task.erb')
+```
+
+
+
+然后更新我们的应用程序，来渲染子目录的文件，将子目录名称添加到模板名称前面。
+
+
+
+```
+route do |r|
+  r.root do
+    @tasks = Task.all
+    view "tasks/index"
+  end
+
+  r.get "tasks", Integer do |id|
+    next unless @task = Task[id]
+    view "tasks/task"
+  end
+end
+```
+
+
+
+
+
 
 
 
