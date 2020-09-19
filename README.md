@@ -4169,13 +4169,92 @@ end
 
 
 
+#### 视图选项
 
 
 
+上面的例子可以正常工作，但是相关的子目录名字，在不同路由中，被返回了两次。让我们使用 `view_options` 插件修复这个问题。首先，我们来把例子修改的更加接近现实。通常，我们只会在有多个路由的情况下使用子目录模板。每个分支都使用相同的模板子目录是十分普遍的情况。因此，我们将扩展示例，使其具有用于任务的分支和用于帖子的分支。
 
 
 
+```
+class App < Roda
+  plugin :render, escape: true
 
+  route do |r|
+    r.on "tasks" do
+      r.get true do
+        @tasks = Task.all
+        view "tasks/index"
+      end
+
+      r.get Integer do |id|
+        next unless @task = Task[id]
+        view "tasks/task"
+      end
+    end
+
+    r.on "posts" do
+      r.get true do
+        @posts = Post.all
+        view "posts/index"
+      end
+
+      r.get Integer do |id|
+        next unless @post = Post[id]
+        view "posts/post"
+      end
+    end
+  end
+end
+```
+
+
+
+如前面的例子所示，在每一个路由中，都出现了重复的视图子目录。我们使用 `view_options` 插件来解决这个问题。它使用 `set_view_subdir` 方法来设置视图的子目录。使用这个插件时，我们需要设置 `render` 插件的 `:layout` 选项，记得要包含路径。这里使用 `views/layout.erb` 文件作为公共的布局文件，否则的话，会在每个子目录中寻找布局文件是否存在。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true, layout: './layout'
+  plugin :view_options
+
+  route do |r|
+    r.on "tasks" do
+      set_view_subdir "tasks"
+
+      r.get true do
+        @tasks = Task.all
+        view "index"
+      end
+
+      r.get Integer do |id|
+        next unless @task = Task[id]
+        view "task"
+      end
+    end
+
+    r.on "posts" do
+      set_view_subdir "posts"
+
+      r.get true do
+        @posts = Post.all
+        view "index"
+      end
+
+      r.get Integer do |id|
+        next unless @post = Post[id]
+        view "post"
+      end
+    end
+  end
+end
+```
+
+
+
+程序执行的行为保持不变，但是现在已经不需要指定在每个路由中都明确指定视图的子目录了。`view_options` 插件还具有按分支更改任何视图或布局选项的功能。如果子目录之一中的模板使用与默认使用的模板不同的工程，则可以使用此方法。
 
 
 
