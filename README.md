@@ -4258,6 +4258,112 @@ end
 
 
 
+#### 减少视图中重复的内容
+
+
+
+在布局节中，我们学习了如何将每个页面中公共的内容拆分到布局文件中，以减少重复。然而，在许多复杂的应用中，遇到类似的问题，我们想要复用代码，但不想在多个视图文件中复制。在本节中，我们将学习如何将模板拆分为多个部分。
+
+
+
+我们有一个 To-Do 应用，在 root 路由中，展示任务。
+
+
+
+![img](.\assets\partials_original.png)
+
+
+
+我们注意到，当我们的列表变得很长，必须滚动才能定位到未完成的任务。要解决这个问题，我们可以对列表进行排序，将未完成的任务排在前面。但是，我们不想丢失列表的实际顺序。
+
+
+
+于是，我们决定让列表只包含未完成的任务。我们创建一个 `/todo` 路由。为了让例子更简单，我们这里就不创建子目录了。所以我们使用 `todo` 视图，以及设置 `@tasks` 实例变量，视图将可被访问。
+
+
+
+```
+route do |r|
+  r.root do
+    @tasks = Task.all
+    view "index"
+  end
+
+  r.get "todo" do
+    @tasks = Task.todo
+    view "todo"
+  end
+end
+```
+
+
+
+然后我们需要创建 `views/todo.erb` 模板文件。由于这只是该实现的第一步，并且我们已经有了风格化的任务，因此我们决定在列表项中使用相同的代码。我们可以稍后再回来简化代码。
+
+
+
+```
+h2>Undone Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <li class="<%= task.done? ? :done : :todo %>">
+      <input type="checkbox"<%= " checked" if task.done? %>>
+      <%= task.title %>
+    </li>
+  <% end %>
+</ul>
+```
+
+
+
+我们来检查一下是否工作正常。
+
+
+
+
+
+![img](.\assets\partials_undone_tasks.png)
+
+
+
+工作一切正常。要简化视图，我们决定将重复的代码拆分为一个模板文件。我们创建 `views/tasks.erb` 视图，并将处理指定任务的代码拷贝过去。
+
+
+
+```
+<li class="<%= task.done? ? :done : :todo %>">
+  <input type="checkbox"<%= " checked" if task.done? %>>
+  <%= task.title %>
+</li>
+```
+
+
+
+现在，我们需要一种方式来渲染视图中的每个任务。幸运的是，我们已经在前面的章节潜移默化的学到了如何来实现，可能没有意识到。我们需要复用 `render` 方法以渲染模板。我们使用 `render` 替代 `view`，因为我们不想在渲染 `views/task.erb` 视图时候引入布局。
+
+
+
+接着传递任务变量到视图，这是在循环中进行的，循环的代码块所接受的变量，就是任务变量。在这里我们推荐使用上下文变量而不是实例变量来进行渲染。
+
+
+
+```
+<h2>Undone Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <%== render("task", locals: { task: task }) %>
+  <% end %>
+</ul>
+```
+
+
+
+现在来确认一下是否正常工作。
+
+
+
+![img](.\assets\partials_undone_tasks2.png)
+
 
 
 
