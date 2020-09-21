@@ -4366,6 +4366,101 @@ h2>Undone Tasks</h2>
 
 
 
+#### render_each
+
+
+
+为一组对象，渲染相同的模板，是 Web 应用程序很常见的操作，`Roda` 提供 `render_each` 插件，对这个操作提供支持。我们可以将插件加载到我们的应用程序中。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :render_each
+
+  # ...
+end
+```
+
+
+
+然后，更新 `views/task` 视图来使用它。渲染过程的代码，和手动渲染很类似。然而，通过使用 `render_each` 插件，提供了更好的性能。
+
+```
+<h2>Undone Tasks</h2>
+<ul>
+  <%== render_each(tasks, "task") %>
+</ul>
+```
+
+
+
+在名为 `task.erb` 的模板文件中，`render_each` 方法自动设置本地变量 `task`，在其中保存要渲染的任务。我们可以通过 `:local `选项来指定不同的本地变量。
+
+
+
+#### partials
+
+
+
+如果我们查看了前面示例的 `views/tasks` 目录，我们可以看到 `task.erb` 和 `todo.erb` 旨在为我们的网站呈现整个页面。在大多数 `Web 框架` 中，通常称为视图。另一方面，`tak.erb` 仅用于呈现页面的一部分，而且可能在一个请求执行上下文中，被执行多次。在 Web 开发中，这种类型的文件，通常被称为片段（partial template 缩写）
+
+
+
+`Ruby on Rails` 提供了通过更改文件名，以区分视图和片段的简便方法。如果文件是片段，我们在文件名前面加上下划线。`partials`插件提供了类似 `Rails` 的方式。这是个使用例子。首先，我们需要重命名片段，在前面加上下划线。
+
+
+
+```
+File.rename('views/task.erb', 'views/_task.erb')
+```
+
+
+
+然后，我们来更新我们的应用程序，以使用 `partials` 插件。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :partials
+
+  # ...
+end
+```
+
+
+
+接着，我们更新 `views/todo.erb` 视图，以使用 `partials` 插件。我们可以通过手动来调用 `partial` 方法，来使用。
+
+
+
+```
+<h2>Undone Tasks</h2>
+<ul>
+  <% tasks.each do |task| %>
+    <%== partial("task", locals: { task: task }) %>
+  <% end %>
+</ul>
+```
+
+
+
+或者使用 `each_partial` 方法，来简单调用。两种方式返回的内容一致。
+
+```
+<h2>Undone Tasks</h2>
+<ul>
+  <%== each_partial(tasks, "task") %>
+</ul>
+```
+
+
+
+`partial` 和 `each_partial` 只是在模板文件名称前面，加上下划线，然而进行加载。它们不做任何其他行为。所以，我们可以使用这两个方法来简化片段的加载。
+
 
 
 
