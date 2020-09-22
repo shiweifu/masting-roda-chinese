@@ -4463,7 +4463,89 @@ end
 
 
 
+#### symbol_views
 
+
+
+`Roda` 的默认行为，是通过匹配代码块返回字符串作为响应内容，或者 `nil`，`false`。但是，这只是默认行为，插件可以对此进行修改。接下来两节，我们将学习如何使用这些插件。
+
+
+
+让我们通过一个之前还没介绍视图模板的例子来讨论这一点。我们的代码看来类似这样：
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  route do |r|
+    r.root do
+      @tasks = Task.all
+      view "index"
+    end
+
+    r.get "todo" do
+      @tasks = Task.todo
+      view "todo"
+    end
+  end
+end
+```
+
+
+
+这里有些重复，我们调用了 `view` 方法多次。实际上，在大型路由树种，大多数 `r.get` 都会以调用 `view` 来结尾。要减少这些重复的代码，我们可以通过 `symbol_view` 插件。`symbol_views` 插件允许匹配返回的符号，如果匹配快返回符号，这个符号会被传递到 `view` 方法，并将被用于响应体。所以，上面的例子可以被这样修改：
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :symbol_views
+
+  route do |r|
+    r.root do
+      @tasks = Task.all
+      :index
+    end
+
+    r.get "todo" do
+      @tasks = Task.todo
+      :todo
+    end
+  end
+end
+```
+
+
+
+`symbol_views` 也支持视图子目录，然而看起来没有那么美观：
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :symbol_views
+
+  route do |r|
+    r.root do
+      @tasks = Task.all
+      :"tasks/index"
+    end
+
+    r.get "todo" do
+      @tasks = Task.todo
+      :"tasks/todo"
+    end
+  end
+end
+```
+
+
+
+但是大多数使用视图子目录的应用程序，通常使用前面介绍过的 `view_options` 插件，因此很少这样调用。
 
 
 
