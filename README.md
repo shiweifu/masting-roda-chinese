@@ -4549,6 +4549,67 @@ end
 
 
 
+#### json
+
+
+
+`symbol_views` 不是对匹配代码块返回类型进行扩展的唯一插件。`symbol_views` 帮助我们减少代码中用于返回重复的 `HTML` 的代码。`Roda` 提供类似的方式，来减少返回 `JSON` 的代码，使用 `json` 插件。
+
+
+
+我们接下来通过一个展示电影上映时间的例子来进行演示。我们构建一个名为 `movies` 的本地变量，在其中保存有关电影信息的数组，这些信息包含电影的上映时间。我们使用两个路由。一个是 `/movies`，列出电影列表。另外一个，`/movies/<slug>`，现实电影的标题，时间，以及指定电影的描述信息。
+
+
+
+```
+class App < Roda
+  movies = [
+    {
+      slug: "infinity-war",
+      title: "Avengers Infinity War",
+      times: ["15:30", "18:40", "21:45"],
+      description: "The Avengers fight Thanos."
+    },
+    {
+      slug: "the-usual-suspects",
+      title: "The Usual Suspects",
+      times: ["11:10", "15:45"],
+      description: "A random police lineup leads to something deadly."
+    },
+    {
+      slug: "the-matrix",
+      title: "The Matrix",
+      times: ["17:15", "22:10"],
+      description: "Computer hacker finds he lives in a simulation."
+    },
+  ]
+
+  route do |r|
+    r.on "movies" do
+      r.get true do
+        movies.map do |movie|
+          "#{movie[:title]}: /movies/#{movie[:slug]}"
+        end.join("\n")
+      end
+
+      r.get String do |slug|
+        movie = movies.find { |m| m[:slug] == slug }
+
+        <<~EOF
+          #{movie.title}
+          Times: [ #{movie.times.join(" ")} ]
+          Description: #{movie.description}
+        EOF
+      end
+    end
+  end
+end
+```
+
+
+
+糟糕的事情总是不期而至，经理决定数据渲染放到前端进行，通过一个名为 `du jour` 的框架。所以，我们的 `Roda` 应用需要切换到返回 `JSON`，然后交给前端进行处理。
+
 
 
 
