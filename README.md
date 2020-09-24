@@ -4612,13 +4612,155 @@ end
 
 
 
+我们首先令 `/movies` 路由返回 `JSON`。我们并不打算手工构造 `JSON`，所以，我们将对 `movies` 数组调用 `to_json`，来使其转换成需要的格式。我们同样需要设置 `Content-Type` 响应头，来使浏览器知道我们返回的使 `JSON`。
 
 
 
+```
+r.get true do
+  response['Content-Type'] = 'application/json'
+
+  movies.map do |movie|
+    {title: movie[:title], url: "/movies/#{movie[:slug]}"}
+  end.to_json
+end
+```
 
 
 
+现在，我们发现返回值已经是 `JSON` 结构了。
 
+
+
+```
+require "lucid_http"
+require "json"
+
+GET "/movies", json: true
+# => [{"title"=>"Avengers Infinity War", "url"=>"/movies/infinity-war"},
+#     {"title"=>"The Usual Suspects", "url"=>"/movies/the-usual-suspects"},
+#     {"title"=>"The Matrix", "url"=>"/movies/the-matrix"}]
+```
+
+
+
+现在，我们将视线移回 `/movies/<slug>` 路由。我们首先需要找到正确的电影。如果我们不能找到电影，我们使用 `next` 方法返回 `404` 响应。如果我们找到了电影，我们设置 `Content-Type`，然后创建新的包含电影信息的 `hash` 结构，并通过调用 `to_json` 方法来返回 `JSON` 结构。
+
+
+
+这是当前应用程序的完整路由。 
+
+
+
+```
+route do |r|
+  r.on "movies" do
+    r.get true do
+      response['Content-Type'] = 'application/json'
+
+      movies.map do |movie|
+        {title: movie[:title], url: "/movies/#{movie[:slug]}"}
+      end.to_json
+    end
+
+    r.get String do |slug|
+      next unless movie = movies.find { |m| m[:slug] == slug }
+      response['Content-Type'] = 'application/json'
+
+      {
+        title:       movie[:title],
+        times:       movie[:times],
+        description: movie[:description]
+      }.to_json
+    end
+  end
+end
+```
+
+
+
+我们来检查一下 `/movies/<slug>` 路由是否工作。
+
+
+
+```
+require "lucid_http"
+require "json"
+
+GET "/movies/infinity-war", json: true
+# => {"title"=>"Avengers Infinity War",
+#     "times"=>["15:30", "18:40", "21:45"],
+#     "description"=>
+#      "The Avengers fight Thanos."}
+```
+
+这种情况有两种情况导致重复。首先，我们需要设置 `Content-Type` 响应头，以便前端将响应作为 `JSON`处理。仅在确定要返回 `JSON` 时才设置 `Content-Type` 标头，而不是在返回空 `404` 响应的情况下才设置。其次，我们需要在要用作 `JSON` 响应主体的哈希或数组上调用 `to_json`。
+
+
+
+`Roda` 的 `json` 插件，设计就是为了删除不同路由中，重复的返回内容。我们首先需要引入并加载这个插件。然后匹配代码块可以直接返回数组或者哈希，这些内容会被转换成 `JSON` 结构并作为响应内容返回。`json` 插件也会设置 `Content-Type` 头，所以，我们无需再设置响应头。
+
+
+
+在本例中，我们的 `r.get true` 路由返回一个数组，我们的 `r.get String` 路由返回一个哈希。他们都会都被转换为 `JSON`。
+
+
+
+```
+class App < Roda
+  plugin :json
+
+  movies = [
+    # ...
+  ]
+
+  route do |r|
+    r.on "movies" do
+      r.get true do
+        movies.map do |movie|
+          {title: movie[:title], url: "/movies/#{movie[:slug]}"}
+        end
+      end
+
+      r.get String do |slug|
+        next unless movie = movies.find { |m| m[:slug] == slug }
+
+        {
+          title:       movie[:title],
+          times:       movie[:times],
+          description: movie[:description]
+        }
+      end
+    end
+  end
+end
+```
+
+
+
+我们再次检测输出，确保一切正常工作。
+
+
+
+```
+require "lucid_http"
+require "json"
+
+GET "/movies", json: true
+# => [{"title"=>"Avengers Infinity War", "url"=>"/movies/infinity-war"},
+#     {"title"=>"The Usual Suspects", "url"=>"/movies/the-usual-suspects"},
+#     {"title"=>"The Matrix", "url"=>"/movies/the-matrix"}]
+
+GET "/movies/infinity-war", json: true
+# => {"title"=>"Avengers Infinity War",
+#     "times"=>["15:30", "18:40", "21:45"],
+#     "description"=>
+#      "The Avengers fight Thanos."}
+```
+
+
+
+希望 `symbol_views` 和 `json` 插件可以展示给你 `Roda` 的默认行为，是如何通过插件进行改变和扩展的，这些插件用起来也很简单。
 
 
 
