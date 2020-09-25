@@ -4764,3 +4764,48 @@ GET "/movies/infinity-war", json: true
 
 
 
+#### Assets
+
+
+
+到目前为止，我们把焦点放在了渲染视图上，以及为请求构造响应。我们将扩大讨论，在视图中使用的 CSS 及 JavaScript 文件。我们现在的例子，是在布局文件中内联了 CSS。通常来说，我们并不这样做。我们会把样式文件拆分，然后进行引用。JavaScript 文件也是如此。
+
+
+
+#### 静态资源
+
+
+
+使用样式文件和 JavaScript 最简单的方式静态引用。通常来说，静态资源文件放在 `public` 目录中，然后在 Web 服务器中进行配置，直接访问，或者使用 `public` 插件来完成这些操作。在开发过程中，我们可能想使用 `public` 插件，接下来让我们在例子中进行添加。
+
+
+
+让我们创建目录结构，以及资源的空文件。
+
+
+
+```
+Dir.mkdir("public/css")
+Dir.mkdir("public/js")
+File.write("public/css/app.css", "")
+File.write("public/js/app.js", "")
+```
+
+
+
+我们打开 `public/css/app.css` 文件，从布局文件中拆分 CSS 代码到其中，此时格式化一下会看起来更舒服。
+
+
+
+```
+ul {
+  list-style: none;
+}
+ul .todo {
+  color: red;
+}
+ul .done {
+  color: green;
+}
+```
+
