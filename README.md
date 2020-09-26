@@ -4809,3 +4809,86 @@ ul .done {
 }
 ```
 
+
+
+然后打开 `public/js/app.js` 文件，添加 checkbox CSS 类发生变化时响应的 javascript 代码。
+
+
+
+```
+(function() {
+  Array.from(document.getElementsByTagName("input")).
+    forEach(function(element) {
+      element.onchange = function() {
+          element.parentNode.classList.toggle("done");
+          element.parentNode.classList.toggle("todo");
+        }
+    });
+})();
+```
+
+
+
+我们需要更新路由树，以响应对 `public` 目录的请求。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :symbol_views
+  plugin :public
+
+  route do |r|
+    r.public
+
+    r.root do
+      @tasks = Task.all
+      :index
+    end
+
+    r.get "todo" do
+      @tasks = Task.todo
+      :todo
+    end
+  end
+end
+```
+
+
+
+然后编辑 `views/layout.erb` 文件，链接需要的 CSS 和 JS 文件。
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <link rel="stylesheet"  href="/css/app.css" />
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%== yield %>
+    <script type="text/javascript" src="/js/app.js"></script>
+  </body>
+</html>
+```
+
+
+
+现在页面正常显示，如之前使用内联样式时一样。当变更 checkbox 样式时，表现得更好。
+
+
+
+使用静态资源，可以使我们来组织更复杂得项目。如果我们足够万股，我们甚至可以在大型网站中使用静态资源。然而，静态资源存在一些问题：
+
+
+
+- 缺乏对资源编译得支持。我们只能直接使用 CSS 和 JavaScript，而无法使用可编译为 JavaScript 和 CSS 得语言，而使 Web 开发更加轻松。对于 JavaScript，这还不是个主要的问题，但是对于任何具有中等复杂样式需求的网站，使用 SCSS 替代 CSS 是一个巨大的进步。
+
+- 缺乏对合并资源的支持。如果我们在多个 CSS 或者 JavaScript 文件中组织我们的代码，浏览器需要请求多次。合并资源可以提高性能，因为他减少带宽并减少延迟。
+
+- 缺乏压缩资源的支持。通常，我们为了性能，在生产环境，只提供压缩过的资源以减少传输带宽。但是我们不会在开发环境中使用压缩过的资源，这会使调试变得复杂。
+
+
+
+庆幸的是，Roda 通过 `assets` 插件来解决这些我们关心得问题。
