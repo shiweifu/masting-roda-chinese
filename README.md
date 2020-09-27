@@ -4892,3 +4892,71 @@ end
 
 
 庆幸的是，Roda 通过 `assets` 插件来解决这些我们关心得问题。
+
+
+
+### 介绍 assets
+
+
+
+`assets` 插件用来编译资源，以及在生产环境中合并和压缩资源。`Roda` 尝试让设置资源尽可能的简单。默认情况下，`Roda` 认为资源存储在 `assets` 目录中，`assets/css` 存储 CSS 文件（以及其他可被编译为 CSS 的文件），`assets/js` 存储 javascript 文件（或者可被编译为 javascript 的文件）。我们首先创建 `assets` 目录，然后将我们的静态资源移动进去。
+
+
+
+```
+Dir.mkdir("assets")
+Dir.mkdir("assets/css")
+Dir.mkdir("assets/js")
+File.rename("public/css/app.css", "assets/css/app.css")
+File.rename("public/js/app.js", "assets/js/app.js")
+```
+
+
+
+然后我们可以更新我们的路由，以对 `assets` 提供响应。需要注意的是，我们只是把 `public` 插件替换为 `assets` 插件，使用 `r.assets` 替代 `r.public` 在路由树中。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :symbol_views
+  plugin :assets, css: ["app.css"], js: ["app.js"]
+
+  route do |r|
+    r.assets
+
+    r.root do
+      @tasks = Task.all
+      :index
+    end
+
+    r.get "todo" do
+      @tasks = Task.todo
+      :todo
+    end
+  end
+end
+```
+
+
+
+我们接着编辑 `views/layout.erb` 文件，调用 `assets` 方法，替换掉硬编码的链接。`assets` 方法返回的内容，已经过滤了 `HTML` 标签（或者多个标签），所以只需要直接使用 `yield`，其中插入的内容已经是过滤后的。我们在这里调用 `assets`两次，以提供对 `CSS` 和 `JavaScript` 文件的资源插入。
+
+```
+<html>
+  <head>
+    <title><%= @page_title || "To-Do or not To-Do" %></title>
+    <%== assets(:css) %>
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    <%== yield %>
+    <%== assets(:js) %>
+  </body>
+</html>
+```
+
+
+
+现在一切可以正常工作，页面显示如之前一样，而已经改用 `assets` 插件。
