@@ -4960,3 +4960,97 @@ end
 
 
 现在一切可以正常工作，页面显示如之前一样，而已经改用 `assets` 插件。
+
+
+
+### 资源编译
+
+
+
+如前面的例子所示，`assets` 插件只提供静态文件的服务，而不做其他处理。它比 `public` 插件的处理速度要慢一些，似乎没有什么优势。让我们实际使用一下 `assets` 插件，以便了解其优点。
+
+
+
+首先，我们将 `assets.css` 文件改为 `assets.scss` 文件。将 `CSS` 文件改为 `SCSS` 文件。
+
+
+
+```
+File.rename("public/css/app.css", "assets/css/app.scss")
+```
+
+
+
+然后，我们更新 `assets` 插件选项，将文件名的变化修改进去。
+
+
+
+```
+plugin :assets, css: ["app.scss"], js: ["app.js"]
+```
+
+
+
+将 `SCSS` 格式的文件转换为 `CSS` 格式，需要引入 `sassc` gem（或者已经弃用的 `sass` gem），所以让我们将 `sassc` gem 添加到 `Gemfile`，然后运行 `bundle install`。
+
+
+
+```
+source "https://rubygems.org"
+
+gem "roda"
+gem "puma"
+gem "tilt"
+gem "erubi"
+gem "sassc"
+```
+
+
+
+安装完 `sassc` gem 后，我们来检查一下是否一些正常。再次访问，可能需要一点额外的时间，因为格式转换需要时间。现在已经可以使用 `SCSS` 的特性了，我们来试试。编辑 `assets/css/app.scss` 文件，修改它使用 `SCSS` 的语法。这对于 CSS 来说，是错误的语法，CSS 不支持嵌套样式标签。然而 SCSS 可以支持类似的标签。
+
+
+
+```
+ul {
+  & {
+    list-style: none;
+  }
+  .todo {
+    color: red;
+  }
+  .done {
+    color: green;
+  }
+}
+```
+
+
+
+再次刷新页面，会发现一切和之前工作的一样。如果我们请求 `/assets/css/app.scss` 文件，我们可以看到 `SCSS` 文件已经被编译为 `CSS`，内容以及 `Content-Type` 也是正确的。
+
+
+
+```
+require "lucid_http"
+
+GET "/assets/css/app.scss"
+status                          # => 200 OK
+content_type                    # => "text/css; charset=UTF-8"
+body
+# >> ul {
+# >>   list-style: none; }
+# >> ul .todo {
+# >>   color: red; }
+# >> ul .done {
+# >>   color: green; }
+```
+
+
+
+SCSS 不只支持标签嵌套，还支持变量，mixins，继承和一些计算操作。任何合法的 CSS 文件，都可以通过简单的把扩展名修改为 `SCSS` 来使用 SCSS 的特性。
+
+
+
+出了支持编译 `CSS`，`assets` 插件也支持编译 `javascript`。`assets` 也提供对模板的支持，通过 `tilt`  gem，这个 `gem` 依赖 `render` 插件。
+
