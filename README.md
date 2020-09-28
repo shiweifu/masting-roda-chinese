@@ -5052,5 +5052,5 @@ SCSS 不只支持标签嵌套，还支持变量，mixins，继承和一些计算
 
 
 
-出了支持编译 `CSS`，`assets` 插件也支持编译 `javascript`。`assets` 也提供对模板的支持，通过 `tilt`  gem，这个 `gem` 依赖 `render` 插件。
+出了支持编译 `CSS`，`assets` 插件也支持编译 `javascript`。`assets` 也提供对模板的支持，通过 `tilt`  gem，这个 `gem` 依赖 `render` 插件。对于 CSS，可以支持 `sass` 和 `less`。对于 JavaScript，支持包括 `coffee`，`ts`，`babel` 以及`rb`。
 
