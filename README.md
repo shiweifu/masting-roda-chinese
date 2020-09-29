@@ -5052,5 +5052,51 @@ SCSS 不只支持标签嵌套，还支持变量，mixins，继承和一些计算
 
 
 
-出了支持编译 `CSS`，`assets` 插件也支持编译 `javascript`。`assets` 也提供对模板的支持，通过 `tilt`  gem，这个 `gem` 依赖 `render` 插件。对于 CSS，可以支持 `sass` 和 `less`。对于 JavaScript，支持包括 `coffee`，`ts`，`babel` 以及`rb`。
+除了支持编译 `CSS`，`assets` 插件也支持编译 `javascript`。`assets` 也提供对模板的支持，通过 `tilt`  gem，这个 `gem` 依赖 `render` 插件。对于 CSS，可以支持 `sass` 和 `less`。对于 JavaScript，支持包括 `coffee`，`ts`，`babel` 以及`rb`（Opal，允许我们使用 Ruby 编写前端代码）。
+
+
+
+#### 资源合并
+
+
+
+在前面的章节，我们讨论了 `assets` 插件提供的一项改进，将其他格式编译为 CSS 或者 JavaScript。现在，我们将看看该插件提供的另一项特性，将 CSS 和 JavaScript 进行合并。
+
+
+
+我们将通过多个 CSS 文件和 JavaScript 文件来举例。对于 CSS，除了我们先前使用的 `app.scss` 文件之外，我们还将假设我们包含了 `Bootstrap CSS` 库的修改版本。对于 JavaScript，我们假设要添加一个 `TypeScript` 文件，该文件将处理任务页面之上的动态页面操作。需要注意的是，我们使用了两种不同的格式来转换为 `CSS` 和 `JavaScript`。
+
+
+
+```
+plugin :assets,
+  css: ["bootstrap.css", "app.scss"],
+  js: ["app.js", "tasks.ts"]
+```
+
+
+
+如果我们预览页面内容，我们将看到调用 `assets(:css)` 和 `assets(:js)` 的返回结果生成 `link` 和 `script` 分别生成标签。我们可以据此推断出 `assets` 插件默认不会合并资源。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+    <link rel="stylesheet"  href="/assets/css/bootstrap.css" />
+    <link rel="stylesheet"  href="/assets/css/app.scss" />
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    # ...
+    <script type="text/javascript" src="/assets/js/app.js"></script>
+    <script type="text/javascript" src="/assets/js/tasks.ts"></script>
+  </body>
+</html>
+```
+
+
+
+
 
