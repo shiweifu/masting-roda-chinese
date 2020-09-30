@@ -5098,5 +5098,41 @@ plugin :assets,
 
 
 
+让我们查看资源编译部分，哪些地方发生了改变。在加载资源插件后，我们将调用 `complie_assets` 方法。
+
+
+
+```
+plugin :assets,
+  css: ["bootstrap.css", "app.scss"],
+  js: ["app.js", "tasks.ts"]
+compile_assets
+```
+
+
+
+当我们调用 `complie_assets` 时，Roda 将转换所有的 `CSS` 资源，并将他们合并在一起。`Roda` 也将转换 `javascript` 资源为`javascript` 文件，以及进行合并。做了这些修改后，如果我们再次请求这个页面，我们可以发现内容已经改变，此时，存在单个的 `link` 和 `script` 标签。在此示例中，字符串被中间截断。
+
+
+
+```
+<html>
+  <head>
+    <title>To-Do or not To-Do</title>
+    <link rel="stylesheet"
+      integrity="sha256-5uh7i+PDFHCJmpP9ef8B8TTTS8x7A2jeM/IvQH9Togs="
+      href="/assets/app.e6e87b8be3c31470899a93fd79ff01f134d.css" />
+  </head>
+  <body>
+    <h1>To-Do or not To-Do</h1>
+    # ...
+    <script type="text/javascript"
+      integrity="sha256-M1Y2mm2BRge3II4oUCyNKCQDthqZ3YTCQlfGTKP7bW8="
+      src="/assets/app.3356369a6d814607b7208e28502c8d282403.js">
+    </script>
+  </body>
+</html>
+```
+
 
 
