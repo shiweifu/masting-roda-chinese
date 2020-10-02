@@ -5141,3 +5141,24 @@ compile_assets
 
 
 每个 tag 都有的 `integrity` 属性的内容也是哈希，但是是进行 `base64` 加密过的。`integrity` 属性允许我们无法控制的其他服务器上，并确保仅在未修改的情况下才加载。
+
+
+
+#### 资源预编译
+
+
+
+`compile_assets` 对生产环境很重要。然而，我们不想在开发环境中使用，因为一旦调用 `compile_assets`，插件将仅提供合并的资源文件，而不会获取对资源文件的更改。通过使用条件控制，我们可以很容易跳过资源合并。
+
+
+
+```
+plugin :assets,
+  css: ["bootstrap.css", "app.scss"],
+  js: ["app.js", "tasks.ts"]
+compile_assets unless ENV["RACK_ENV"] == "development"
+```
+
+
+
+但是，在某些情况下，需要在程序启动之前调用 `compile_assets`。一个原因是在只读文件系统上运行。`assets` 可以使用被称为资源预编译的进程来处理。通过资源预编译，可以在应用程序启动之前对资源进行编译，并将元数据保存在 `JSON` 文件中。当应用程序启动时，它会检查 JSON 文件是否存在。如果存在，则启用，如果不存在则在默认模式下运行，并对每个资源文件产生单独的链接和脚本标签。
