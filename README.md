@@ -5162,3 +5162,36 @@ compile_assets unless ENV["RACK_ENV"] == "development"
 
 
 但是，在某些情况下，需要在程序启动之前调用 `compile_assets`。一个原因是在只读文件系统上运行。`assets` 可以使用被称为资源预编译的进程来处理。通过资源预编译，可以在应用程序启动之前对资源进行编译，并将元数据保存在 `JSON` 文件中。当应用程序启动时，它会检查 JSON 文件是否存在。如果存在，则启用，如果不存在则在默认模式下运行，并对每个资源文件产生单独的链接和脚本标签。
+
+
+
+使用资源预编译，我们需要在加载 `assets` 插件的时候，带上 `:precompiled` 选项，以及预编译的 `metadata` 文件。另外，我们需要删除对 `compile_assets` 方法的调用。
+
+
+
+```
+plugin :assets,
+  css: ["bootstrap.css", "app.scss"],
+  js: ["app.js", "tasks.ts"],
+  precompiled: File.expand_path('../compiled_assets.json', __FILE__)
+```
+
+
+
+预编译资源，通常使用 `rake` 任务。`rake` 任务也可以部署到 Heroku，进行预编译资源。
+
+ 
+
+```
+namespace :assets do
+  desc "Precompile the assets"
+  task :precompile do
+    require './app'
+    App.compile_assets
+  end
+end
+```
+
+
+
+当调用 `compile_assets`时，如果 `:precompiled` 选项传递给了 `assets` 插件，`metadata` 相关的资源将被写入到 JSON 格式的文件，所以，下次应用启动的时候，`assets` 插件将工作在 `compiled` 模式。
