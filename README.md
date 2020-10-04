@@ -5195,3 +5195,26 @@ end
 
 
 当调用 `compile_assets`时，如果 `:precompiled` 选项传递给了 `assets` 插件，`metadata` 相关的资源将被写入到 JSON 格式的文件，所以，下次应用启动的时候，`assets` 插件将工作在 `compiled` 模式。
+
+
+
+### 资源压缩
+
+
+
+`assets` 插件的最后一个主要特性，是在合并之后压缩资源。压缩资源分为两种。第一种通常被称为最小化。通过引入像 `yuicompressor` 这种第三方 `gem` 来实现，其将监视生成的 `CSS` 和 `JavaScript` 代码，并保证功能不变的情况下，将体积最小化。如果我们已经安装 `yuicompressor`，`assets` 插件自动选择它用于压缩资源。
+
+
+
+另一种压缩使用 `gzip` 来完成，将在资源最小化之后进行这一步。这提供 `gzip` 压缩过的资源版本。当收到对资源的请求，并在头中接收 `gzip` 编码时，`gzip` 版本的资源将被直接返回，这可以大幅降低请求传输的体积。我们可以使用 `assets` 插件的 `:gzip` 参数来激活这一特性。
+
+
+
+```
+plugin :assets,
+  css: ["bootstrap.css", "app.scss"],
+  js: ["app.js", "tasks.ts"],
+  precompiled: File.expand_path('../compiled_assets.json', __FILE__),
+  gzip: true
+```
+
