@@ -5242,4 +5242,41 @@ plugin :assets,
 
 
 
-让我们扩展一下我们的应用，我们在博客功能之外，添加一个在线商店。
+让我们扩展一下我们的应用，我们在博客功能之外，添加一个在线商店。在每一节中都有许多路由，这样 `app.rb` 的管理变得艰难。
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.on "tasks" do
+      # task routes
+    end
+
+    r.on "posts" do
+      # post routes
+    end
+
+    r.on "store" do
+      # store routes
+    end
+  end
+end
+```
+
+
+
+我们决定将他们拆分到不同文件，将不同部分分为 `tasks`，`posts` 和 `store`。我们添加 `routes` 文件夹，创建保存三个路由分支分割后的文件。
+
+
+
+```
+Dir.mkdir("routes")
+File.write("routes/tasks.rb", "")
+File.write("routes/posts.rb", "")
+File.write("routes/store.rb", "")
+```
+
+
+
+然后，我们打开 `routes/tasks.rb` 文件，移动任务相关的路由分支到里面，使用 `hash_routes` 插件。这里解释一下。`hash_routes` 方法接收可选的命名空间参数。如果不传额外的参数，则使用默认的明明空间。`hash_routes` 返回一个对象，允许我们在其上面定义路由，使用语法类似`Core Roda`。在本例中，我们调用 "`tasks`"时，对 `tasks` 分支，设置空的命名空间。
