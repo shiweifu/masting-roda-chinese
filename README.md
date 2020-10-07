@@ -5280,3 +5280,62 @@ File.write("routes/store.rb", "")
 
 
 然后，我们打开 `routes/tasks.rb` 文件，移动任务相关的路由分支到里面，使用 `hash_routes` 插件。这里解释一下。`hash_routes` 方法接收可选的命名空间参数。如果不传额外的参数，则使用默认的明明空间。`hash_routes` 返回一个对象，允许我们在其上面定义路由，使用语法类似`Core Roda`。在本例中，我们调用 "`tasks`"时，对 `tasks` 分支，设置空的命名空间。
+
+
+
+```
+class App
+  hash_routes.on "tasks" do |r|
+    # task routes
+  end
+end
+```
+
+
+
+类似的，我们打开 `routes/posts.rb` 文件，将 `posts` 路由分支的代码移动进去。
+
+
+
+```
+class App
+  hash_routes.on "posts" do |r|
+    # post routes
+  end
+end
+```
+
+
+
+然后，打开 `routes/store.rb` 文件，移动 `store` 路由分支进去。
+
+
+
+```
+class App
+  hash_routes.on "store" do |r|
+    # store routes
+  end
+end
+```
+
+
+
+最后，我们修改 `our.rb` 文件，引入 `hash_routes` 插件。我们在插件中，指定路由拆分出去的路径。然后，我们可以删除路由分支的代码，替换玮 `r.hash_routes`。
+
+
+
+```
+class App < Roda
+  plugin :hash_routes
+
+  Dir["routes/**/*.rb"].each do |route_file|
+    require_relative route_file
+  end
+
+  route do |r|
+    r.hash_routes
+  end
+end
+```
+
