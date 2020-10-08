@@ -5339,3 +5339,10 @@ class App < Roda
 end
 ```
 
+
+
+在这个路由树种，全部的请求进来，将调用 `r.hash_routes.r.hash_routes` 进行寻找与之匹配的路由。如果请求以 `tasks` 开头，它将调用 `hash_routes.on "tasks"` 代码块，我们放在了 `routes/tasks.rb` 文件中。如果请求以 `posts` 开头，将调用 `hash_routes.on "posts"` 代码块。如果请求以 `store` 开头，将会调用 `hash_routes.on "store"` 块。如果请求没有被匹配到，将会返回 404。
+
+
+
+`hash_routes` 插件的命名由来是 `hash_routes.on` 方法是使用哈希结构进行保存的。当请求进来，`r.hash_routes` 根据请求路径的第一节，在哈希表中寻找匹配的值，并将请求分发过去。这种方式，加快了查找速度，也更利于代码组织。
