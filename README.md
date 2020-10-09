@@ -5346,3 +5346,89 @@ end
 
 
 `hash_routes` 插件的命名由来是 `hash_routes.on` 方法是使用哈希结构进行保存的。当请求进来，`r.hash_routes` 根据请求路径的第一节，在哈希表中寻找匹配的值，并将请求分发过去。这种方式，加快了查找速度，也更利于代码组织。
+
+
+
+
+
+### hash_routes 命名空间
+
+
+
+假设我们的应用持续保持增长，商店也变得非常流行。`routes/store.rb` 文件变得巨大，我们想要继续分割它。
+
+
+
+```
+class App
+  hash_routes.on "store" do |r|
+    r.on "items" do
+      # routes for viewing items
+    end
+
+    r.on "cart" do
+      # routes for managing shopping cart
+    end
+
+    r.on "checkout" do
+      # routes for checking out
+    end
+  end
+end
+```
+
+
+
+幸运得是，拆分分支和拆分 root 路由树得思路基本一致。我们添加 `routes/store` 目录，并创建打算保存分割后代码得三个文件。
+
+
+
+```
+Dir.mkdir("routes/store")
+File.write("routes/store/items.rb", "")
+File.write("routes/store/cart.rb", "")
+File.write("routes/store/checkout.rb", "")
+```
+
+
+
+然后，我们可以移动用于展示 items 的代码到 `routes/store/items.rb` 文件。我们再次调用 `hash_routes`，但此次我们带上一个参数 `/store` 用于命名空间。 我们使用这个命名空间作为路由树的节点。如果已经存在的路由路径不包括任何占位符，则建议使用此方法。如果已经存在的路由路径包含占位符，则建议使用符号作为命名空间。
+
+
+
+```
+class App
+  hash_routes("/store").on "items" do |r|
+    # routes for viewing items
+  end
+end
+```
+
+
+
+我们可以将购物车部分的代码移动到 `routes/store/cart.rb` 文件中。
+
+
+
+```
+class App
+  hash_routes("/store").on "cart" do |r|
+    # routes for managing shopping cart
+  end
+end
+```
+
+
+
+我们可以将结算部分的代码移动到 `routes/store/checkout.rb` 文件中。
+
+
+
+```
+class App
+  hash_routes("/store").on "checkout" do |r|
+    # routes for checking out
+  end
+end
+```
+
