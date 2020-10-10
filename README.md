@@ -5432,3 +5432,20 @@ class App
 end
 ```
 
+
+
+然后，我们可以更新 `routes/store.rb` 分支路由文件的内容，来使用 `r.hash_routes`。我们没有提供参数给 `r.hash_routes`，它仍然可以正确处理 `store` 命名空间中三个路由分支。`r.hash_routes` 的参数是可选的，依据这个作为命名空间，去查询路由。参数的默认值，是匹配路径（`r.matched_path`）。当 `r.hash_branches` 在 `app.rb` 文件中被调用后，此时匹配 `""` 空字符串。这是 `hash_routes.on "store"` 被正确分发的原因。当 `r.hash_routes` 在 `hash_routes.on "store"` 块中被调用，此时匹配的路径是 `/store`。
+
+
+
+```
+class App
+  hash_routes.on "store" do |r|
+    r.hash_routes
+  end
+end
+```
+
+
+
+对于 `hash_routes` 插件，我们可以分割根路由树或者路由树中的任意分支，将内容拆分到独立文件中。这允许我们通过很小的路由开销，来轻易组织大型的路由系统。
