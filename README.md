@@ -5449,3 +5449,67 @@ end
 
 
 对于 `hash_routes` 插件，我们可以分割根路由树或者路由树中的任意分支，将内容拆分到独立文件中。这允许我们通过很小的路由开销，来轻易组织大型的路由系统。
+
+
+
+#### hash_routes 占位符
+
+
+
+除了商店路由分支变化大以外，任务路由分支也变得庞大。然而，任务路由分支和商店分支有一些不同，大多数路由是在找到相关任务之后进行处理的。这是任务路由分支的代码。
+
+
+
+```
+class App
+  hash_routes.on "tasks" do |r|
+    r.get true do
+      # page showing all tasks
+    end
+
+    r.on Integer do |id|
+      next unless @task = Task[id]
+
+      r.is do
+        r.get do 
+          # page for editing task
+        end
+
+        r.post do
+          # action for updating task information
+        end
+      end
+
+      r.get "detail" do
+        # page with more detailed task information
+      end
+
+      r.post "finish" do
+        # action to mark task as finished
+      end
+
+      r.on "dependencies" do
+        # routes for managing task dependencies
+      end
+
+      r.on "related" do
+        # routes for managing related tasks
+      end
+    end
+  end
+end
+```
+
+
+
+我们假设分割这段代码在三个路由文件中。其中一个将处理 `r.is`，`r.get "detail"` 和 `r.post "finish"` 路由。另一个包含 `r.on "dependencies"` 路由分支。最后将处理 `r.on "related"` 路由分支。首先我们来创建空白文件。
+
+
+
+```
+Dir.mkdir("routes/tasks")
+File.write("routes/tasks/task.rb", "")
+File.write("routes/tasks/dependencies.rb", "")
+File.write("routes/tasks/related.rb", "")
+```
+
