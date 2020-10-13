@@ -5513,3 +5513,169 @@ File.write("routes/tasks/dependencies.rb", "")
 File.write("routes/tasks/related.rb", "")
 ```
 
+
+
+我们首先编辑 `routes/tasks/task.rb` 文件。这似乎和前面的分支文件有一些不同。我们继续调用 `hash_routes`，但我们不能使用已经存在的路由路径用于命名空间。诸如 `/tasks/1`，`/tasks/24601`及其他类似的，已经被占用了。因此，不能用于命名空间。在本例中，推荐选择符号作为命名空间，如 `:task`。
+
+
+
+与前面路由文件不同，在本文件中，我们没有处理完整的路由分支，而是在同一分支中处理一些单独的路由。我们将通过将一个块传递给 `hash_routes` 调用来处理此问题。该块将产生 `hash_routes` 调用返回的对象。然后，我们调用 `hr.is true`，`hr.get "detail"` 和 `hr.post "finish"` 来设置每个哈希路由。
+
+
+
+重要的是要知道传递给 `hash_routes(:task)` 的块不能用作匹配块。只是在加载文件时调用一次，而不是每个请求都调用。我们应该将其视为设置哈希路由的快捷方法。但是，传递给 `hr.is true`，`hr.get "detail"` 和 `hr.post "finish"` 的参数可以用于匹配块，并且，我们在 `Roda` 路由块的所有功能都可以在这些块内使用。
+
+
+
+在本例中，另一件需要注意的事是，我们需要在 `hr.is` 返回 `true`。与标准的 `r.is` 调用不同，haxi 路由 `on`，`is`，`get` 和 `post` 方法都需要一个参数。另外，请注意 `hr.get` 和 `hr.post` 不会将请求对象产生到块。这是因为路由在调用时完成，我们仍然可以通过调用 `request` 方法来访问请求对象。
+
+
+
+```
+class App
+  hash_routes(:task) do |hr|
+    hr.is true do |r|
+      r.get do 
+        # page for editing task
+      end
+
+      r.post do
+        # action for updating task information
+      end
+    end
+
+    hr.get "detail" do
+      # page with more detailed task information
+    end
+
+    hr.post "finish" do
+      # action to mark task as finished
+    end
+  end
+end
+```
+
+
+
+如果需要，我们也可以省略 `hash_routes(:task)`。在这种情况，在将散列路由对象产生到块内部，在散列路由对象的上下文使用 `instance_exec` 评估块。这使得代码更简洁，但更有效。这两种情况下，行为一致。
+
+```
+class App
+  hash_routes(:task) do
+    is true do |r|
+      r.get do 
+        # page for editing task
+      end
+
+      r.post do
+        # action for updating task information
+      end
+    end
+
+    get "detail" do
+      # page with more detailed task information
+    end
+
+    post "finish" do
+      # action to mark task as finished
+    end
+  end
+end
+```
+
+
+
+接着，我们移动任务 `dependencies` 到 `/task/dependencies.rb` 文件中去。
+
+
+
+```
+class App
+  hash_routes(:task).on "dependencies" do |r|
+    # routes for managing task dependencies
+  end
+end
+```
+
+
+
+移动 `related` 任务到 `routes/tasks/related.rb` 文件中去。
+
+
+
+```
+class App
+  hash_routes(:task).on "related" do |r|
+    # routes for managing related tasks
+  end
+end
+```
+
+
+
+最后，我们编辑 `routes/tasks.rb` 文件，替换路由调用为 `r.hash_routes(:task)`。
+
+
+
+```
+class App
+  hash_routes.on "tasks" do |r|
+    r.get true do
+      # page showing all tasks
+    end
+
+    r.on Integer do |id|
+      next unless @task = Task[id]
+
+      r.hash_routes(:task)
+    end
+  end
+end
+```
+
+
+
+#### 类型路由
+
+
+
+从维护的角度来看，如果我们的 Web 应用程序只需要返回一种类型的数据，将是最简单的。比如我们有一个标准的 Web 应用程序，其中响应的主体是 HTML，或者我们有一个 JSON API，响应的主体是 JSON。然而，在某些情况下，Web 应用需要返回多种类型的数据。例如，我们可以使用同一个应用程序，既可以返回 HTML 数据，又可以在需要的时候返回 JSON。
+
+
+
+我们可以通过 Roda 来处理多种返回类型，只是并不漂亮。可以通过判断扩展名来实现，如果收到一个 .html 请求，我们可以返回 HTML 格式的数据，如果收到一个 .json 的请求，那就返回 JSON 格式的数据。
+
+```
+require "roda"
+
+class App < Roda
+  plugin :render, escape: true
+  plugin :json
+
+  route do |r|
+    r.get /tasks(.html|.json)?/ do |type|
+      @tasks = Task.all
+
+      case type
+      when nil, '.html'
+        view("tasks")
+      when '.json'
+        @tasks.map do |task|
+          {id: task.id, name: task.name}
+        end
+      end
+    end
+  end
+end
+```
+
+
+
+
+
+
+
+
+
+
+
