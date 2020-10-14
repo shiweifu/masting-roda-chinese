@@ -5671,6 +5671,42 @@ end
 
 
 
+这种方式工作的很好，对于单个路由来说，可能是最好的处理方式。但是，如果我们有多个路由，使用这种方式，需要对每个路由进行单独的判断，增加了很多额外的工作。如果有一个更简单的方式会更好。
+
+
+
+`Roda` 通过 `type_routing` 插件来简化操作，它提供了一种更好的方式。我们不需要正则表达式处理文件扩展名，因为 `type_routing` 插件使路由忽略扩展名。因此，我们可以使用更简单的方式来替代正则表达式判断。`type_routing` 插件添加了`r.html` 和 `r.json` 匹配方法。仅当请求使用 `.html` 扩展名或请求不使用扩展名时，`r.html` 才执行该代码块。同样的，仅当 `r.json` 扩展名被匹配到时，`r.json` 代码块才会被执行。
+
+
+
+```
+require "roda"
+
+class App < Roda
+  plugin :render, escape: true
+  plugin :json
+  plugin :type_routing
+
+  route do |r|
+    r.get "tasks" do |type|
+      @tasks = Task.all
+
+      r.html do
+        view("tasks")
+      end
+
+      r.json do
+        @tasks.map do |task|
+          {id: task.id, name: task.name}
+        end
+      end
+    end
+  end
+end
+```
+
+
+
 
 
 
