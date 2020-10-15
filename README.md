@@ -5707,7 +5707,11 @@ end
 
 
 
+默认情况下，如果没有扩展名，`type_routing` 插件将分析请求的 `accept` 头，并自动选择插件可处理的类型。如果 `Accept` 头不包含任何 `type_routing` 插件能处理的类型，`type_routing` 将返回 HTML。
 
+
+
+不止上面提到的 `r.html` 和 `r.json` 类型可以处理，`type_routing` 插件同样支持 `r.xml`，来处理 XML 格式的内容。用户也可以自定义类型。此外，我们可以配置插件，只通过扩展名进行匹配（不使用 Accept 头），或者只使用 Accept 头（不使用扩展名）。通过阅读插件文档获取更多信息。
 
 
 
