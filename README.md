@@ -5744,3 +5744,111 @@ end
 
 上面例子中，省略了路由块。这在 `Roda`  中是允许的，就像一个空的路由块中。现在收到任意请求，都会收到 404。
 
+
+
+#### status_handler
+
+
+
+相较于 `status_handler` 插件，`not_found` 插件的功能只是其的一个子集。`status_handler` 插件允许我们定义指定代码的匹配代码块，并且对该状态代码的空响应，会导致调用该块。`not_found` 插件只是为 `404` 状态码设置执行要执行的代码块。
+
+
+
+举例来说，假设当访问不被允许时，我们想返回相同的页面，我们可以使用 `status_handler` 插件，设置 `403` 状态码的响应。和上面 `not_found` 插件的例子类似，我们可以创建 `views/403.erb` 文件，来处理 `403` 响应。在路由种，我们可以检查请求的 IP 地址，如果它不包含 `127.0.0.1`，我们就设置状态码为 `403`，然后使用 `next` 方法来跳过继续处理过程（使用 `r.halt`）。
+
+
+
+```
+require "roda"
+
+class App < Roda
+  plugin :render, escape: true
+
+  plugin :status_handler
+
+  status_handler(403) do
+    view('404')
+  end
+
+  route do |r|
+    unless r.ip =~ /127.0.0.1/
+      response.status = 403
+      next
+    end
+
+    # rest of app
+  end
+end
+```
+
+
+
+#### empty_root
+
+
+
+假设我们有一个应用程序，路由完全匹配 `/is`，返回一个字符串。
+
+```
+require "roda"
+
+class App < Roda
+  route do |r|
+    r.is "is" do
+      "IS"
+    end
+  end
+end
+```
+
+
+
+现在来试一下。我们访问 http://localhost:9292/is，一切工作的很好。但是如果我们在 URL 结尾加了一个反斜杠，我们会收到 404 状态码。
+
+
+
+```
+require "lucid_http"
+
+GET "/is"                       # => "IS"
+GET "/is/"                      # => "ERROR: 404 Not Found"
+```
+
+
+
+如果我们使用 `r.on` 代替 `r.is` 呢？
+
+
+
+```
+class App < Roda
+  route do |r|
+    r.s "is" do
+      "IS"
+    end
+
+    r.on "on" do
+      "ON"
+    end
+  end
+end
+```
+
+
+
+甚至不只是反斜杠，后面跟任何信息都可以正常工作。
+
+
+
+```
+require "lucid_http"
+
+GET "/is"                       # => "IS"
+GET "/is/"                      # => "STATUS: 404 Not Found"
+GET "/is/anything"              # => "STATUS: 404 Not Found"
+
+GET "/on"                       # => "ON"
+GET "/on/"                      # => "ON"
+GET "/on/anything"              # => "ON"
+```
+
