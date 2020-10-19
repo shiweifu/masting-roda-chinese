@@ -5916,6 +5916,34 @@ end
 
 
 
+#### slash_path_empty
+
+
+
+`slash_path_empty` 插件非常类似 `empty_root` 插件，不加区分的使用他们是一个坏的做法。两个插件的不同在于 `empty_root_only` 只影响 `r.root` 方法，允许空路径在 `/` 后面，而 `slash_path_empty` 在处理 `r.is`、`r.get` 和 `r.post` 匹配方法中的匹配器后，将 `/` 的剩余地址处理为空。
+
+
+
+另一种处理上一章例子的办法是，将 `empty_root` 改为 `slash_path_empty`，然后使用 `r.get "on"`。`slash_path_empty` 插件将让 `r.get "on"` 匹配 `/` 和 `/on/` 的请求。
+
+
+
+```
+class App < Roda
+  plugin :slash_path_empty
+
+  route do |r|
+    r.is "is" do
+      "IS"
+    end
+
+    r.get "on" do
+      "ON ROOT"
+    end
+  end
+end
+```
+
 
 
 
