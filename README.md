@@ -5946,9 +5946,47 @@ end
 
 
 
+### 安全
 
 
 
+`Roda` 很重视安全。因为对许多应用程序来说没有必要，所以默认没有激活所有有关安全的特性，类似 `CSRF` 只有在需要用到 `HTML` 表单的应用程序才会用到，像只提供 AJAX JSON 调用的应用就不会用到。像 `Roda` 的许多其他特性一样，有关安全的特性也是通过插件来实现的。
+
+
+
+在有关渲染的内容中，我们讨论了 `render` 插件的 `:escape`选项， 以阻止 `CSRF`  跨站脚本。在本节中，我们将讨论更重要的有关安全的内容。
+
+
+
+#### route_csrf
+
+
+
+假设我们有一个背包相关的网站，有一个表单，允许我们添加有关背包的条目。
+
+
+
+![img](assets\csrf_empty_form.png)
+
+今天我们拿起背包，计划去 `Gotham` 旅行。我们把车票、准备阅读的书，电话和钱包都装进去。
+
+
+
+![img](assets\csrf_form_with_initial_items.png)
+
+当我们执行这些操作时，有人通过一个 `Ruby` 脚本偷偷在我们的背包藏了一把刀。
+
+
+
+```
+require "http"
+
+response = HTTP.post "http://localhost:9292/add",
+  form: {item: "KNIFE"}
+
+response
+# => #<HTTP::Response/1.1 302 Found {"Location"=>"/form", "Content-Type"=>"text/html", "Content-Length"=>"0"}>
+```
 
 
 
