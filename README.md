@@ -5990,5 +5990,52 @@ response
 
 
 
- 
+ 然后我们添加我们的头信息。因此，当页面重新加载，我们发现我们的背包中出现了我们从未添加过的条目，一把小刀，这会引起机场的警报。
 
+
+
+![img](assets\csrf_adding_headphones.png)
+
+这种陌生的请求展示了我们应用中存在的很大的安全的问题。这类安全问题被称为 `Cross Site Request Forgery`，或者 `CSRF`。Roda 有一个名为 `route_csrf` 的插件，用来修复此类问题。我们首先加载 `route_csrf` 插件在我们的应用中，然后在路由树种调用 `check_csrf!`。如果请求是一个 `POST` 类型，`check_csrf!` 调用将检查这个请求的表单，是否是合法的。
+
+
+
+保护网站不受 `CSRF` 攻击，需要配合上下文会话，所以我们需要加载 `sessions` 插件（我们将在稍后进行讲解）。通常来说，如果我们不使用会话，我们无需担心 CSRF 的攻击。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :sessions, secret: "some_long_secret"
+  plugin :route_csrf
+
+  route do |r|
+    check_csrf!
+
+    # Rest of application
+  end
+end
+```
+
+
+
+现在，我们如何阻止此类攻击？其实只要我们使用了 `route_csrf` 插件，并在路由树种调用了 `check_csrf!`，Roda 将为每个 POST 请求检查该令牌的存在。如果收到不包含合法令牌的 `POST` 请求，或者令牌无效，则 `check_csrf!` 调用会引发异常（默认情况下）。
+
+
+
+因此，如果攻击者提交相同的添加项请求时，他将获得 `Roda::RodaPlugins::RouteCsrf::InvalidToken` 异常，意味着 `CSRF` 令牌与预期值不匹配。
+
+
+
+```
+require "http"
+
+response = HTTP.post "http://localhost:9292/add",
+  form: { item: "KNIFE" }
+
+response.body.to_s
+# => "Roda::RodaPlugins::RouteCsrf::InvalidToken: " \
+#    "encoded token is not a string"
+#    ...
+```
