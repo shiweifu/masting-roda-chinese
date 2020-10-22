@@ -6039,3 +6039,60 @@ response.body.to_s
 #    "encoded token is not a string"
 #    ...
 ```
+
+
+
+如果我们尝试向背包种添加一个条目，我们会收到浏览器返回的相同错误。这是因为 `check_csrf!` 方法不能验证表单提交的请求。
+
+
+
+为了确保 `check_csrf!` 方法知道请求是来自我们的表单，我们需要确保网站上的所有表单都提交一个参数，以将该请求标识为有效。此参数被称为 `CSRF` 令牌。我们可以生成带有此参数的 HTML 标签，通过 `csrf_tag` 方法。此方法通过生成隐藏的输入标签 HTML，返回的内容包含双引号。所以，我们需要进行配合上面提到的 `render` 插件的 `:escape` 参数，来进行转义。
+
+
+
+```
+<form action="/add" method="post">
+  <%== csrf_tag('/add') %>
+  <div class="input-group">
+    <input type="text" name="item" class="form-input"/>
+    <input type="submit" value="Add item!"
+      class="btn btn-primary input-group-btn"/>
+  </div>
+</form>
+```
+
+
+
+如果我们查看页面源码，我们将看到生成隐藏字段。
+
+
+
+```
+require "lucid_http"
+
+GET "/form"
+puts body
+
+# >> <html>
+# >>   <head>
+# >>     ...
+# >>   </head>
+# >>   <body>
+# >>   ...
+# >>   <form action="/add" method="post">
+# >>     <input type="hidden" name="_csrf"
+# >>       value="aDaSZ18CNWqpIZd1...KBxn2bWmIj8rni0" />
+# >>     <div class="input-group">
+# >>       <input type="text" name="item" class="form-input"/>
+# >>       <input type="submit" value="Add item!"
+# >>         class="btn btn-primary input-group-btn"/>
+# >>     </div>
+# >>   </form>
+# >>
+# >> <h1> Backpack contents:</h1>
+# >> ...
+```
+
+
+
+现在，我们的应用可以过滤掉 `Cross Site Request Forgery` 啦。
