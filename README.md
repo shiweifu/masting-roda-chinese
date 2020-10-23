@@ -6096,3 +6096,34 @@ puts body
 
 
 现在，我们的应用可以过滤掉 `Cross Site Request Forgery` 啦。
+
+
+
+### typecast_params
+
+
+
+Ruby web 应用程序最常见的安全问题之一源于攻击者提交的意外参数类型。例如，假设我们试图在应用程序中实现搜索。我们使用 `r.params['fiield']` 获得用户提交的名为 `field` 的值，并传递给我们的搜索方法。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  route do |r|
+    r.get "task", "search" do
+      field = r.params['field']
+      next unless field
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
+
+
+在执行之前，我们应该考虑 `r.params['field']` 的类型。使用 `Rack` 的默认参数解析，如果未收到任何值，则值为 `nil`；如果提交了值，则可以为字符串。上面的代码处理了这两种情况。但是有可能我们期待接收的是数组或者哈希。大多数情况下，我们知道我们期待收到值的类型，并且我们处理的类型值是安全的。
+
