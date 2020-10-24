@@ -6127,3 +6127,56 @@ end
 
 在执行之前，我们应该考虑 `r.params['field']` 的类型。使用 `Rack` 的默认参数解析，如果未收到任何值，则值为 `nil`；如果提交了值，则可以为字符串。上面的代码处理了这两种情况。但是有可能我们期待接收的是数组或者哈希。大多数情况下，我们知道我们期待收到值的类型，并且我们处理的类型值是安全的。
 
+
+
+`typecast_params` 插件允许提交参数是期待的类型，或者可以转换为期待的类型。所以，如果我们期待 `field` 参数接收一个字符串，我们可以使用 `typecast_params` 插件，确保类型正确。使用 `typecast_params.str('field')`，如果我们提交了数组或者哈希，则会报错。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :typecast_params
+
+  route do |r|
+    r.get "task", "search" do
+      field = typecast_params.str('field')
+      next unless field
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
+
+
+上面的例子有一个问题，`field` 参数有可能提交一个空字符串。在 Ruby 中，空字符串为 `true`，而不是 `false`，比如搜索空字符串时的行为。这也许与我们的需求不一致。处理空字符串的做法与处理非空字符串有一些不一样，`typecast_params` 有一个快捷方法，`nonempty_str`。调用了它，将会在空字符串时，返回 `nil`，空字符串与没有提交字符串做相同处理。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :typecast_params
+
+  route do |r|
+    r.get "task", "search" do
+      field = typecast_params.nonempty_str('field')
+      next unless field
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
+
+
+如果我们有许多字段，手动检查每一个参数值是否为空是繁琐的。假设我们在输入组件中使用了 `HTML` 的 `required` 属性，浏览器就不会提交空的参数。如果提交上来的内容都是正确的，代码会大幅简化，只在提交内容错误时抛出异常。`typecast_params` 插件允许使用 `!` 结尾的便利方法。`!` 方法将会抛出异常，代替返回 `nil`。
+
+
+
+我们可以切换到 `nonempty_str!`，并移除 `next unless field` 调用。如果一个空 `field` 被提交上来，代码将抛出一个异常，此时我们可以使用异常处理语句进行处理（我们将在后面的章节讨论异常处理）。
