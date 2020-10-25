@@ -6180,3 +6180,71 @@ end
 
 
 我们可以切换到 `nonempty_str!`，并移除 `next unless field` 调用。如果一个空 `field` 被提交上来，代码将抛出一个异常，此时我们可以使用异常处理语句进行处理（我们将在后面的章节讨论异常处理）。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :typecast_params
+
+  route do |r|
+    r.get "task", "search" do
+      field = typecast_params.nonempty_str!('field')
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
+
+
+### 整形参数
+
+
+
+在许多场景下，我们想要提交的参数为整数类型。然而，默认情况下，Rack 的参数传递只支持字符串，数组，和哈希参数，它不支持整数类型的参数传递。所以，传递整数类型的参数，只能我们手动处理。如果我们想要把上面的例子 `field` 参数转换为整数型，我们可以使用 `to_i`。需要注意的是，`nil.to_i` 和`"".to_i` 都会返回0，所以，我们假定 `field` 返回的内容大于 0，否则不使用这个参数。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  route do |r|
+    r.get "task", "search" do
+      field = r.params['field'].to_i
+      next unless field > 0
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
+
+
+这么做有一些问题。首先代码有些冗长，然而更重要的是，如果字段以数组或哈希的形式提交，它会导致 `NoMethodError` 错误。这个需求是 `Web` 开发过程中一个常见的需求，所以 `typecast_params` 也提供了相关方法处理。使用 `pos_int` 方法，我们可以简洁的实现这个需求。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+  plugin :typecast_params
+
+  route do |r|
+    r.get "task", "search" do
+      field = typecast_params.pos_int('field')
+      next unless field
+
+      @tasks = Task.where(field: field).all
+      view('tasks')
+    end
+  end
+end
+```
+
