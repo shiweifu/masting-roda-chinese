@@ -6248,3 +6248,77 @@ class App < Roda
 end
 ```
 
+
+
+#### 嵌套参数
+
+
+
+HTTP 查询字符串参数不支持嵌套，只支持字符串类型的 key-value，那为什么我们要担心数组和哈希类型的参数呢？这是因为 `Rack` 自动解析特定的 key-value 结构，将其转换为嵌套参数。举个例子，`Rack` 自动处理这种类型的 `HTTP` 查询参数：
+
+```?task[id]=1&task[name]=Study
+?task[id]=1&task[name]=Study
+```
+
+ 并将参数转换为哈希结构：
+
+```
+{
+  "task" => {
+    "id" => 1,
+    "name" => "Study"
+  }
+}
+```
+
+可以看到，我们有一个表单，包含嵌套参数，我们可以通过访问 `r.params` 来使用：
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  route do |r|
+    r.is "tasks" do
+      r.get do
+        view "tasks"
+      end
+
+      r.post do
+        name = r.params['task']['name']
+        Task.create(name: name)
+        r.redirect 
+      end
+    end
+  end
+end
+```
+
+此时，仍然具有刚刚提到的问题，`r.params['task']['name']` 根据内容不同，有可能是 `nil`，字符串，哈希，或者数组。如果假定 `r.params['task']` 为哈希，但进行不恰当的调用，也会抛出 `NoMethodError` 异常。`typecast_params` 同样可以处理这个问题。如果我们想要通过 `task` 参数访问，并返回非空字符串时，可以通过上一节介绍的方法进行使用。
+
+
+
+我们使用 `typecast_params['task']`，将返回与 `typecast_params` 返回的对象相似的对象，但仅限嵌套参数 `task`。然后调用 `nonempty_str!`，该对象上的方法获取 `task['name']` 参数的值，此时如果没提交参数，或者参数格式不正确，则报错。
+
+
+
+```
+class App < Roda
+  plugin :render, escape: true
+
+  route do |r|
+    r.is "tasks" do
+      r.get do
+        view "tasks"
+      end
+
+      r.post do
+        name = typecast_params['task'].
+          nonempty_str!('name'])
+        Task.create(name: name)
+        r.redirect 
+      end
+    end
+  end
+end
+```
+
