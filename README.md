@@ -6322,3 +6322,32 @@ class App < Roda
 end
 ```
 
+
+
+#### default_headers
+
+
+
+`Roda` 有 `default_headers` 插件用于改变响应的默认头。默认情况下，只有 `Content-Type` 头被添加，值为 `text/html`。有许多安全特性，需要自定义请求的头。所以，如果我们编写一个面向浏览器的应用（而不是一个 API 程序），我们也许需要指定头。
+
+
+
+最重要的是 `Strict-Transport-Security`。如果我们在 `https` 协议部署的服务器上进行 `http` 调用，我们会用到它。还有一些其他头也可能会用到，如  `X-Content-Type-Options`，`X-Frame-Options` 和  `X-XSS-Protection`，这些大多被用到老版本的浏览器。
+
+
+
+需要注意的是，`default_headers` 插件覆盖 `Roda` 的默认头，因此，我们应该在使用它时，指定 `Content-Type` 头。这个插件使用一个散列格式作为默认的头。
+
+
+
+```
+class App < Roda
+  plugin :default_headers,
+    'Content-Type'=>'text/html',
+    'Strict-Transport-Security'=>'max-age=16070400;',
+    'X-Content-Type-Options'=>'nosniff',
+    'X-Frame-Options'=>'deny',
+    'X-XSS-Protection'=>'1; mode=block'
+end
+```
+
