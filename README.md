@@ -6351,3 +6351,34 @@ class App < Roda
 end
 ```
 
+
+
+#### content_security_policy
+
+
+
+如果我们的应用程序是给浏览器用的，可能会用到一个有关安全的头：`Content-Security-Policy`。然而，这个头的设置有些复杂，并且针对每个请求都有一些变化，所以，`Roda` 提供了 `Content_Security_Policy` 插件来处理它。`Content-Security-Policy` 头有助于防止浏览器受到攻击，例如跨站脚本和点击劫持。我们可以使用它来指定哪些浏览器传输给服务器的内容是被允许的，如嵌入的页面中，表单是否可被提交，以及其他一些特性。
+
+
+
+`content_security_policy` 插件的基础配置通过加载插件时，传递一个块来完成。该代码块被 `content security policy` 对象所调用，我们可以调用该对象的方法配置默认的策略。方便起见，块参数被称为 `csp`。推荐在块的最顶端，调用 `csp.default_src :none`，这设置了默认阻止所有的调用。接下来我们来配置哪些是被允许的，如样式表的 `style_src`，脚本的 `script_src`，以及图片的 `img_src` 。下面是个配置 `Content-Security-Policy` 的例子：
+
+
+
+```
+class App < Roda
+  plugin :content_security_policy do |csp|
+    csp.default_src :none # deny everything by default
+    csp.style_src :self
+    csp.script_src :self
+    csp.connect_src :self
+    csp.img_src :self
+    csp.font_src :self
+    csp.form_action :self
+    csp.base_uri :none
+    csp.frame_ancestors :none
+    csp.block_all_mixed_content
+  end
+end
+```
+
