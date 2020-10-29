@@ -6382,3 +6382,44 @@ class App < Roda
 end
 ```
 
+
+
+此限制策略可能对某些页面有效。然而，也许网站的某些部分，需要使用一些外部的 `JavaScript`，并希望禁止表单提交。`content_security_policy` 插件允许根据路由不同，或者分支不同，来进行更改。我们可以通过在路由中，通过访问 `content_security_policy` 对象，并在其中调用某方法，以替换或追加现有的某些设置。
+
+
+
+```
+r.on "special-section" do
+  content_security_policy.add_script_src \
+    "https://external-javascript-site.com"
+  content_security_policy.form_action :none
+
+  # rest of branch
+end
+```
+
+
+
+我们同样可以通过传递代码块，来进行配置，这种方式更被推荐。
+
+
+
+```
+r.on "special-section" do
+  content_security_policy do |csp|
+    csp.add_script_src "https://external-javascript-site.com"
+    csp.form_action :none
+  end
+
+  # rest of branch
+end
+```
+
+
+
+### 处理邮件
+
+
+
+希望本书已经为你展示使用路由树来处理 `Web` 请求的方式，除了增加灵活性，还使请求处理代码简单易懂。事实上，我们也可以使用类似的方法处理非 `Web` 请求，并获得类似的优点。`Web` 应用程序中，最常见的需求之一使处理电子邮件，而 `Roda` 包括用于发送电子邮件和处理收到的电子邮件的插件。
+
