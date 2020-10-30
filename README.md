@@ -6423,3 +6423,66 @@ end
 
 希望本书已经为你展示使用路由树来处理 `Web` 请求的方式，除了增加灵活性，还使请求处理代码简单易懂。事实上，我们也可以使用类似的方法处理非 `Web` 请求，并获得类似的优点。`Web` 应用程序中，最常见的需求之一使处理电子邮件，而 `Roda` 包括用于发送电子邮件和处理收到的电子邮件的插件。
 
+
+
+假设我们需要增加一个邮件功能到我们的应用中，在更新任务之后，我们向创建任务的用户发送电子邮件。我们还希望在任务标记为完成时向创建任务的用户发送电子邮件。我们将添加一个名为 `App::Mailer` 的子类，它用来处理电子邮件的发送。
+
+
+
+`mailer` 插件需要引用 `mail` gem，所以我们需要添加他们到 `Gemfile`，并执行 `bundle install`。
+
+```
+source "https://rubygems.org"
+
+gem "roda"
+gem "puma"
+gem "tilt"
+gem "erubi"
+gem "mail"
+```
+
+
+
+将有关邮件的代码保存到 `mailer.rb` 中。
+
+```
+class App::Mailer < Roda
+  plugin :mailer
+
+  route do |r|
+    r.on "tasks", Integer do |id|
+      no_mail! unless @task = Task[id]
+
+      from "tasks@.example.com"
+      to task.user.email
+
+      r.mail "updated" do
+        subject "Task ##{id} Updated"
+        "Task #{task.name} has been updated!"
+      end
+
+      r.mail "finished" do
+        subject "Task ##{id} Finished"
+        "Task #{task.name} has been finished!"
+      end
+    end
+  end
+end
+```
+
+
+
+可以注意到，上面处理邮件的代码与处理 Web 请求的代码非常类似。相同的 `r.on` 匹配方法同样被用于邮件处理分支代码，`"tasks"` 和 `Integer` 匹配器也以相同的方式工作。`r.mail` 匹配方法非常类似 `r.get` 匹配方法，因为它要求剩余路径被完全使用。匹配块的返回值用作发送电子邮件的正文。
+
+
+
+当 mail 路由树被内部调用时，它期待全部的请求发送邮件成功。如果我们没有发送邮件，我们需要调用 `no_mail!` 方法。如果我们没有调用 `no_mail!`，路由方法中无法找到邮件的内容，会抛出一个异常。这就是为什么上面的例子，当没有邮件要处理时，调用 `no_mail`，而不是 `next`方法。
+
+
+
+
+
+
+
+
+
