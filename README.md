@@ -6488,6 +6488,86 @@ end
 
 
 
+所以，我们可以将更新邮件模板的任务，移动到 `mailer_views/task_updated.erb` 文件，将发送完成邮件模板的任务移动到 `mailer_views/task_finished.erb` 文件，然后更新路由代码。
+
+
+
+```
+class App::Mailer < Roda
+  plugin :render, views: 'mailer_views', layout: nil
+  plugin :symbol_views
+  plugin :mailer
+
+  route do |r|
+    r.on "tasks", Integer do |id|
+      no_mail! unless @task = Task[id]
+
+      from "tasks@.example.com"
+      to task.user.email
+
+      r.mail "updated" do
+        subject "Task ##{id} Updated"
+        :task_updated
+      end
+
+      r.mail "finished" do
+        subject "Task ##{id} Finished"
+        :task_finished
+      end
+    end
+  end
+end
+```
+
+
+
+现在我们已经有了处理发送邮件的路由，如何使用它呢？通常来说，我们可以引用邮件文件，在 Web 请求中，使用`sendmail` 方法来发送邮件。让我们看一个路由树的例子。这是一个标准的 `Roda` 路由树，只是在发送邮件请求中，多了一个 `Mailer.sendmail` 的调用，用于发送邮件。
+
+
+
+```
+class App < Roda
+  require_relative 'mailer'
+
+  plugin :typecast_params
+  plugin :render, escape: true
+  plugin :symbol_views
+
+  route do |r|
+    r.on "tasks", Integer do |id|
+      next unless @task = Task[id]
+
+      r.is do
+        r.get do
+          :task
+        end
+
+        r.post do
+          status = typecast_params.nonempty_str('status')
+          @task.update(status: status)
+          Mailer.sendmail("/task/#{id}/updated")
+          r.redirect
+        end
+      end
+
+      r.post "close" do
+        @task.update(active: false)
+        Mailer.sendmail("/task/#{id}/finished")
+        r.redirect "/task/#{id}"
+      end
+    end
+  end
+end
+```
+
+
+
+在本例中，我们提供了发送邮件的请求调用地址。当 `Web` 请求地址与邮件地址相同时，我们可以通过 `Mailer.sendmail(r.path_info)` 来直接调用，这省去了额外的请求构建。
+
+
+
+
+
 
 
 
