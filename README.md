@@ -6586,7 +6586,32 @@ end
 
 
 
+让我们看一个简单的使用路由树的例子，以此处理单独类型的邮件。假设我们有一个类似之前例子的情况。在向用户发送任务更新的邮件中，我们通知用户可以通过恢复 `CLOSE` 来关闭这个任务。
 
+
+
+我们使用 ` `tasks@example.com 作为发件人地址，所以回复也要发给相同的地址。所以我们只需要考虑这个邮件地址。我们同样需要检查主题，是否与我们之前发送的邮件任务匹配。我们需要检查任务是活跃的。如果任务是活跃的，且回复包含`CLOSE`，我们就关闭这个任务。
+
+
+
+```
+class MailProcessor < Roda
+  plugin :mail_processor
+
+  route do |r|
+    r.rcpt "tasks@example.com" do
+      r.subject /Task #(\d+) Updated/ do |task_id|
+        unhandled_mail("no matching task") unless task = Task[task_id.to_i]
+        unhandled_mail("task is not active") unless task.active?
+
+        r.handle_text /\bCLOSE\b/i do
+          task.update(active: false, closed_by: from)
+        end
+      end
+    end
+  end
+end
+```
 
 
 
