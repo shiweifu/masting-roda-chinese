@@ -6615,3 +6615,43 @@ end
 
 
 
+###获取邮件
+
+
+
+接收电子邮件有许多种方式。无论使用何种方式，`mail_processor` 插件操作在 `Mail` 实例上（来自 `mail` gem）。处理一封邮件，我们调用`Mail` 实例的 `process_mail` 方法。在路由树上掉用本方法，会处理邮件。
+
+
+
+这是一个处理邮件的例子，读取保存在文件系统中的邮件。`Mail.read` 将读取邮件文件，并创建 `Mail` 实例，该实例将传递 `process_mail`，来处理邮件。
+
+
+
+```
+MailProcessor.process_mail(
+  Mail.read('/path/to/message.eml')
+)
+```
+
+
+
+在 `Web` 请求中接收电子邮件是可能的。例如，如果邮件消息作为 `web` 请求中的参数提交，我们可以在 `web` 路有树中掉用 `process_mail`。
+
+
+
+```
+r.post "handle-email" do
+  MailProcessor.process_mail(
+    Mail.new(typecast_params.nonempty_str('mail'))
+  )
+  response.status = 204
+  ''
+end
+```
+
+
+
+
+
+
+
