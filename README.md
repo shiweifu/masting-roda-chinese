@@ -6649,7 +6649,42 @@ r.post "handle-email" do
 end
 ```
 
+我们同样可以通过传递 `mail_processor` 插件的参数，来处理 `POP3` 和 `IMAP` 类型的收件箱，使用 `process_mailbox` 来实现。
 
+
+
+```
+MailProcessor.process_mailbox(
+  retreiver: Mail::POP3.new
+)
+```
+
+
+
+#### 通过路由树处理多个邮件需求
+
+
+
+对于使用路由树来处理多个邮件需求，最好根据收件地址，将其分割。`mail_processor` 插件内置了行为类似 `hash_routes` 插件的功能，通过调用 `rcpt` 类方法来实现。除了允许我们jia那个邮件处理拆分为单独的文件之外，当收件人地址是字符串时，还允许我们更快的处理。
+
+
+
+```
+class MailProcessor < Roda
+  plugin :mail_processor
+
+  rcpt "tasks@example.com" do |r|
+    r.subject /Task #(\d+) Updated/ do |task_id|
+      unhandled_mail("no matching task") unless task = Task[task_id.to_i]
+      unhandled_mail("task is not active") unless task.active?
+
+      r.handle_text /\bCLOSE\b/i do
+        task.update(active: false, closed_by: from)
+      end
+    end
+  end
+end
+```
 
 
 
