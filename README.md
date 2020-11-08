@@ -6694,3 +6694,60 @@ end
 
 电子邮件存在一个普遍的问题是它可以被被造。邮件头（包括 From 和 To）不包括反应邮件地址的时使用的发件人和收件人的电子邮件地址。为了获得此信息，我们需要让邮件服务器将 `SMTP` 的发件人（MAIl FROM）和收件人（RCPT TO）记录到邮件的单独头中。`mail_processor` 插件的 `rcpt` 方法默认情况下，查看 `To` 和 `CC` 头，但如果我们想要更改它以查看由邮件服务器设置的标头，则可以使用 `mail_recipients` 方法。如果我们的邮件服务器在 `X-SMTP-To`标头中存储了电子邮件的实际收件人，则可以更改 `rcpt` 方法，以使用该头。
 
+
+
+#### 检测诈骗邮件
+
+
+
+邮件信息的 `From`，`To`，`CC` 以及 `SMTP`·收件人和发件人，均是可匿名的，我们均不可相信。如果我们想保证收到的电子邮件，是对系统发出的邮件的大幅，最好在发送邮件时带上 `HMAC`，以及在收到邮件时候进行检查。
+
+
+
+让我们修改 `App::Mailer` 引入 `HMAC`，在发送任务更新通知邮件时，带上 `HMAC`。我们使用我们存储的环境变量密钥`APP_EMAIL_HMAC_SECRET`来进行计算 `HMAC`。在任务更新邮件的路由，选取任务 ID，并使用其构建包含 `HMAC` 的字符串。我们将设置字符串为实例变量，并保存为名为 `@ref`（便于引用），然后我们将修改 `task_updated.erb` 模板，引入实例变量。
+
+
+
+```
+require 'openssl'
+require 'securerandom'
+
+class App::Mailer < Roda
+  HMAC_SECRET = ENV.fetch('APP_EMAIL_HMAC_SECRET')
+
+  plugin :render, views: 'mailer_views', layout: nil
+  plugin :symbol_views
+  plugin :mailer
+
+  def make_ref(type, id)
+    hmac_data = "#{type}:#{id}:#{SecureRandom.hex(16)}"
+    hmac = OpenSSL::HMAC.hexdigest(
+      OpenSSL::Digest::SHA256.new,
+      HMAC_SECRET,
+      hmac_data
+    )
+    "ref:#{hmac_data}:#{hmac}:ref"
+  end
+
+  route do |r|
+    r.on "tasks", Integer do |id|
+      no_mail! unless @task = Task[id]
+
+      from "tasks@.example.com"
+      to task.user.email
+
+      r.mail "updated" do
+        @ref = make_ref('task', id)
+        subject "Task ##{id} Updated"
+        :task_updated
+      end
+
+      r.mail "finished" do
+        subject "Task ##{id} Finished"
+        :task_finished
+      end
+    end
+  end
+end
+```
+
