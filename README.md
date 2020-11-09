@@ -6751,3 +6751,49 @@ class App::Mailer < Roda
 end
 ```
 
+
+
+做完这些，我们需要修改 `MailProcessor` 来检查引用被正确提供。我们需要访问 `APP_EMAIL_HMAC_SECRET` 环境变量来获取 `HMAC` 密钥，该值在不同进程中是相同的。我们需要检查邮件内容，找到引用。我们检查引用包含验证的 `HMAC`，以及任务 ID 在邮件主题中被包含。
+
+
+
+```
+class MailProcessor < Roda
+  HMAC_SECRET = ENV.fetch('APP_EMAIL_HMAC_SECRET')
+
+  plugin :mail_processor
+
+  def check_hmac(data, hmac)
+    OpenSSL::HMAC.hexdigest(
+      OpenSSL::Digest::SHA256.new,
+      HMAC_SECRET,
+      data
+    ) == hmac
+  end
+
+  rcpt "tasks@example.com" do |r|
+    r.subject /Task #(\d+) Updated/ do |task_id|
+      unhandled_mail("no matching task") unless task = Task[task_id.to_i]
+      unhandled_mail("task is not active") unless task.active?
+
+      regexp = /ref:(task:(\d+):\h+):(\h+):ref/
+      r.body(regexp) do |hmac_data, ref_task_id, hmac|
+        unhandled_mail("bad HMAC") unless check_hmac(hmac_data, hmac)
+
+        unless ref_task_id.to_i == task_id.to_i
+          unhandled_mail("task ID mismatch")
+        end
+
+        r.handle_text /\bCLOSE\b/i do
+          task.update(active: false, closed_by: from)
+        end
+      end
+    end
+  end
+end
+```
+
+
+
+需要注意的是，如果仅将邮件发送给个人，则此方法可以提供良好的安全性，比如对于任务更新的邮件。然而，如果向多个地址发送邮件，我们将包含电子邮件地址或收件人的 ID 作为引用的一部分，这样我们可以准确的判断谁收到了回复的邮件。在某些情况下，我们可能要使用检查与电子邮件发件人匹配的内容（如上面的代码所示）。
+
